@@ -47,6 +47,7 @@ contract CredentialContract is Ownable {
 
     function issueCredential(
         bytes32 _id,
+        address _issuer,
         address _target,
         bytes32 _url,
         bytes32 _dm_id,
@@ -56,7 +57,7 @@ contract CredentialContract is Ownable {
     ) public onlyOwner {
         Credential memory newCredential = Credential(
             _id,
-            msg.sender,
+            _issuer,
             _target,
             _url,
             _dm_id,
