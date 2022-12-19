@@ -45,16 +45,6 @@ contract CredentialContract is Ownable {
         credentialLogs[_id][timestamp] = CredentialLog(url, timestamp, status);
     }
 
-    function createLog(bytes32 _id, bytes32 _url) private {
-        uint256 timestamp = block.timestamp;
-        credentialLogs[_id][timestamp] = CredentialLog(url, timestamp, credentials[_id].status);
-    }
-
-    function createLog(bytes32 _id, CredentialStatus _status) private {
-        uint256 timestamp = block.timestamp;
-        credentialLogs[_id][timestamp] = CredentialLog(credentials[_id].metadata_url, timestamp, status);
-    }
-
     function issueCredential(
         bytes32 _id,
         address _target,
@@ -77,7 +67,7 @@ contract CredentialContract is Ownable {
         );
 
         credentials[_id] = newCredential;
-        createLog(_id, newCredential.metadata_url);
+        createLog(_id, newCredential.metadata_url, CredentialStatus.Active);
     }
 
     function isValid(bytes32 _id) public view returns (bool) {
@@ -90,6 +80,6 @@ contract CredentialContract is Ownable {
     function revokeCredential(bytes32 _id) public {
         require(msg.sender == credentials[_id].issuer, "Only issuer can revoke credential");
         credentials[_id].status = CredentialStatus.Revoked;
-        createLog(_id, CredentialStatus.Revoked);
+        createLog(_id, credentials[_id].metadata_url, CredentialStatus.Revoked);
     }
 }
