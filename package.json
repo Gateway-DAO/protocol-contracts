@@ -1,0 +1,14 @@
+{
+  "name": "protocol-contracts",
+  "version": "1.0.0",
+  "description": "Gateway Protocol contracts (in Solidity)",
+  "repository": "git@github.com:Gateway-DAO/protocol-contracts.git",
+  "author": "Nuno Carvalho <nunoormaker21@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "slither": "slither . --solc-remaps '@openzeppelin=node_modules/@openzeppelin @chainlink=node_modules/@chainlink' --exclude naming-convention,external-function,low-level-calls"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.8.0"
+  }
+}
