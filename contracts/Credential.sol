@@ -42,7 +42,7 @@ contract CredentialContract is Ownable {
 
     function createLog(bytes32 _id, bytes32 _url, CredentialStatus _status) private {
         uint256 timestamp = block.timestamp;
-        credentialLogs[_id][timestamp] = CredentialLog(url, timestamp, status);
+        credentialLogs[_id][timestamp] = CredentialLog(_url, timestamp, _status);
     }
 
     function issueCredential(
@@ -73,7 +73,20 @@ contract CredentialContract is Ownable {
 
     function isValid(bytes32 _id) public view returns (bool) {
         bool status = credentials[_id].status == CredentialStatus.Active ? true : false;
-        address recovered = ecrecover(abi.encodePacked(credentials[_id].metadata_hash), v, r, s);
+
+        require(status, "Credential: Credential is not active");
+
+        bytes memory sig = abi.encodePacked(credentials[_id].metadata_hash);
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+        assembly {
+            r := mload(add(sig, 32))
+            s := mload(add(sig, 64))
+            v := and(mload(add(sig, 65)), 255)
+        }
+
+        address recovered = ecrecover(credentials[_id].metadata_hash, v, r, s);
 
         return recovered == credentials[_id].issuer ? true : false;
     }
