@@ -93,6 +93,13 @@ contract GatewayID is Ownable {
     }
 
     /**
+     * @dev Function to get the master wallet
+     */
+    function noOfWallets() public view returns (uint) {
+        return wallet_indices.length;
+    }
+
+    /**
      * @dev Function to add a wallet to the mapping
      * @param _wallet The address of the wallet
      */
