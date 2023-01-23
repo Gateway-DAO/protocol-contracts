@@ -3,16 +3,23 @@ pragma solidity ^0.8.17;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract CredentialContract is Ownable {
-    enum CredentialStatus {Active, Revoked, Suspended, Invalid}
+    enum CredentialStatus {
+        Active,
+        Revoked,
+        Suspended,
+        Invalid
+    }
 
     struct CredentialContext {
         bytes32 name;
         bytes32 description;
+        bytes32 revokedConditions;
+        bytes32 suspendedConditions;
     }
 
     /**
-      * @dev Credential struct
-      */
+     * @dev Credential struct
+     */
     struct Credential {
         bytes32 id;
         address issuer;
@@ -23,11 +30,12 @@ contract CredentialContract is Ownable {
         uint256 timestamp;
         CredentialContext context;
         bytes32 metadata_hash;
+        address[] permissions;
     }
 
     /**
-      * @dev Credential log
-      */
+     * @dev Credential log
+     */
     struct CredentialLog {
         bytes32 url;
         uint256 timestamp;
@@ -35,14 +43,41 @@ contract CredentialContract is Ownable {
     }
 
     /**
-      * @dev Credential mapping
-      */
+     * @dev Events
+     */
+
+    event CredentialIssued(
+        bytes32 id,
+        address issuer,
+        address target,
+        bytes32 url,
+        bytes32 dm_id,
+        CredentialStatus status,
+        uint256 timestamp,
+        CredentialContext context,
+        bytes32 metadata_hash,
+        address[] permissions
+    );
+
+    event CredentialRevoked(bytes32 id);
+
+    /**
+     * @dev Credential mapping
+     */
     mapping(bytes32 => Credential) public credentials;
     mapping(bytes32 => mapping(uint256 => CredentialLog)) public credentialLogs;
 
-    function createLog(bytes32 _id, bytes32 _url, CredentialStatus _status) private {
+    function createLog(
+        bytes32 _id,
+        bytes32 _url,
+        CredentialStatus _status
+    ) private {
         uint256 timestamp = block.timestamp;
-        credentialLogs[_id][timestamp] = CredentialLog(_url, timestamp, _status);
+        credentialLogs[_id][timestamp] = CredentialLog(
+            _url,
+            timestamp,
+            _status
+        );
     }
 
     function issueCredential(
@@ -63,16 +98,31 @@ contract CredentialContract is Ownable {
             _dm_id,
             CredentialStatus.Active,
             block.timestamp,
-            CredentialContext(_name, _description),
-            _metadata_hash
+            CredentialContext(_name, _description, "", ""),
+            _metadata_hash,
+            new address[](0)
         );
 
+        emit CredentialIssued(
+            _id,
+            _issuer,
+            _target,
+            _url,
+            _dm_id,
+            CredentialStatus.Active,
+            block.timestamp,
+            CredentialContext(_name, _description, "", ""),
+            _metadata_hash,
+            new address[](0)
+        );
         credentials[_id] = newCredential;
         createLog(_id, newCredential.metadata_url, CredentialStatus.Active);
     }
 
     function isValid(bytes32 _id) public view returns (bool) {
-        bool status = credentials[_id].status == CredentialStatus.Active ? true : false;
+        bool status = credentials[_id].status == CredentialStatus.Active
+            ? true
+            : false;
 
         require(status, "Credential: Credential is not active");
 
@@ -92,7 +142,11 @@ contract CredentialContract is Ownable {
     }
 
     function revokeCredential(bytes32 _id) public {
-        require(msg.sender == credentials[_id].issuer, "Only issuer can revoke credential");
+        require(
+            msg.sender == credentials[_id].issuer,
+            "Only issuer can revoke credential"
+        );
+        emit CredentialRevoked(_id);
         credentials[_id].status = CredentialStatus.Revoked;
         createLog(_id, credentials[_id].metadata_url, CredentialStatus.Revoked);
     }

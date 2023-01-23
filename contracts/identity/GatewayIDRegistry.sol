@@ -7,6 +7,15 @@ contract GatewayIDRegistry {
     mapping(bytes32 => address) public identities;
     bytes32[] public usernames;
 
+    /*
+     * @dev Events
+     */
+
+    event IdentityDeployed(
+        bytes32 indexed _username,
+        address indexed _identity
+    );
+
     /**
      * deployIdentity - deploys a new GatewayID contract and associates it with a provided username
      * @param _master - address of the master wallet for the new GatewayID contract
@@ -14,8 +23,15 @@ contract GatewayIDRegistry {
      * @param _username - bytes32 representing the username to associate with the new GatewayID contract
      * @return _success - a boolean indicating whether the deployment was successful
      */
-    function deployIdentity(address _master, address _signer, bytes32 _username) external returns (bool _success) {
-        require (identities[_username] == address(0), "GatewayIDRegistry: Username already exists");
+    function deployIdentity(
+        address _master,
+        address _signer,
+        bytes32 _username
+    ) external returns (bool _success) {
+        require(
+            identities[_username] == address(0),
+            "GatewayIDRegistry: Username already exists"
+        );
         GatewayID newIdentity = new GatewayID(_master, _signer);
         identities[_username] = address(newIdentity);
         return true;
@@ -35,7 +51,11 @@ contract GatewayIDRegistry {
      * @param _username - bytes32 representing the username associated with the desired GatewayID contract
      * @return - the address of the master wallet for the GatewayID contract associated with the provided username
      */
-    function getMasterWallet(bytes32 _username) external view returns (address) {
+    function getMasterWallet(bytes32 _username)
+        external
+        view
+        returns (address)
+    {
         return GatewayID(identities[_username]).getMasterWallet();
     }
 
