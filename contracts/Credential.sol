@@ -14,8 +14,8 @@ contract CredentialContract is Ownable {
     struct CredentialContext {
         string name;
         string description;
-        string revokedConditions;
-        string suspendedConditions;
+        string revoked_conditions;
+        string suspended_conditions;
     }
 
     /**
@@ -144,6 +144,7 @@ contract CredentialContract is Ownable {
             ),
             credentials[_id].metadata_sig
         );
+
         return recovered == credentials[_id].issuer ? true : false;
     }
 
