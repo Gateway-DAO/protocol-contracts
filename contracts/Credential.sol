@@ -11,10 +11,10 @@ contract CredentialContract is Ownable {
     }
 
     struct CredentialContext {
-        bytes32 name;
-        bytes32 description;
-        bytes32 revokedConditions;
-        bytes32 suspendedConditions;
+        string name;
+        string description;
+        string revokedConditions;
+        string suspendedConditions;
     }
 
     /**
@@ -24,12 +24,12 @@ contract CredentialContract is Ownable {
         bytes32 id;
         address issuer;
         address target;
-        bytes32 metadata_url;
+        string metadata_url;
         bytes32 dm_id;
         CredentialStatus status;
         uint256 timestamp;
         CredentialContext context;
-        bytes32 metadata_hash;
+        bytes metadata_hash;
         address[] permissions;
     }
 
@@ -37,7 +37,7 @@ contract CredentialContract is Ownable {
      * @dev Credential log
      */
     struct CredentialLog {
-        bytes32 url;
+        string url;
         uint256 timestamp;
         CredentialStatus status;
     }
@@ -50,12 +50,12 @@ contract CredentialContract is Ownable {
         bytes32 id,
         address issuer,
         address target,
-        bytes32 url,
+        string url,
         bytes32 dm_id,
         CredentialStatus status,
         uint256 timestamp,
         CredentialContext context,
-        bytes32 metadata_hash,
+        bytes metadata_hash,
         address[] permissions
     );
 
@@ -69,7 +69,7 @@ contract CredentialContract is Ownable {
 
     function createLog(
         bytes32 _id,
-        bytes32 _url,
+        string memory _url,
         CredentialStatus _status
     ) private {
         uint256 timestamp = block.timestamp;
@@ -84,11 +84,13 @@ contract CredentialContract is Ownable {
         bytes32 _id,
         address _issuer,
         address _target,
-        bytes32 _url,
+        string calldata _url,
         bytes32 _dm_id,
-        bytes32 _name,
-        bytes32 _description,
-        bytes32 _metadata_hash
+        string calldata _name,
+        string calldata _description,
+        string calldata _revoked_conditions,
+        string calldata _suspended_conditions,
+        bytes calldata _metadata_hash
     ) public onlyOwner {
         Credential memory newCredential = Credential(
             _id,
@@ -98,7 +100,12 @@ contract CredentialContract is Ownable {
             _dm_id,
             CredentialStatus.Active,
             block.timestamp,
-            CredentialContext(_name, _description, "", ""),
+            CredentialContext(
+                _name,
+                _description,
+                _revoked_conditions,
+                _suspended_conditions
+            ),
             _metadata_hash,
             new address[](0)
         );
@@ -108,10 +115,15 @@ contract CredentialContract is Ownable {
             _issuer,
             _target,
             _url,
-            _dm_id,
+            keccak256(abi.encodePacked(_dm_id)),
             CredentialStatus.Active,
             block.timestamp,
-            CredentialContext(_name, _description, "", ""),
+            CredentialContext(
+                _name,
+                _description,
+                _revoked_conditions,
+                _suspended_conditions
+            ),
             _metadata_hash,
             new address[](0)
         );
@@ -126,17 +138,20 @@ contract CredentialContract is Ownable {
 
         require(status, "Credential: Credential is not active");
 
-        bytes memory sig = abi.encodePacked(credentials[_id].metadata_hash);
+        bytes memory source = credentials[_id].metadata_hash;
+
+        bytes32 sig;
         bytes32 r;
         bytes32 s;
         uint8 v;
         assembly {
+            sig := mload(add(source, 32))
             r := mload(add(sig, 32))
             s := mload(add(sig, 64))
             v := and(mload(add(sig, 65)), 255)
         }
 
-        address recovered = ecrecover(credentials[_id].metadata_hash, v, r, s);
+        address recovered = ecrecover(sig, v, r, s);
 
         return recovered == credentials[_id].issuer ? true : false;
     }
