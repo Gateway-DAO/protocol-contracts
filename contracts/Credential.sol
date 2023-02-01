@@ -1,6 +1,7 @@
 pragma solidity ^0.8.17;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract CredentialContract is Ownable {
     enum CredentialStatus {
@@ -29,7 +30,7 @@ contract CredentialContract is Ownable {
         CredentialStatus status;
         uint256 timestamp;
         CredentialContext context;
-        bytes metadata_hash;
+        bytes metadata_sig;
         address[] permissions;
     }
 
@@ -55,7 +56,7 @@ contract CredentialContract is Ownable {
         CredentialStatus status,
         uint256 timestamp,
         CredentialContext context,
-        bytes metadata_hash,
+        bytes metadata_sig,
         address[] permissions
     );
 
@@ -90,7 +91,7 @@ contract CredentialContract is Ownable {
         string memory _description,
         string memory _revoked_conditions,
         string memory _suspended_conditions,
-        bytes memory _metadata_hash
+        bytes memory _metadata_sig
     ) public onlyOwner {
         Credential memory newCredential = Credential(
             _id,
@@ -106,7 +107,7 @@ contract CredentialContract is Ownable {
                 _revoked_conditions,
                 _suspended_conditions
             ),
-            _metadata_hash,
+            _metadata_sig,
             new address[](0)
         );
 
@@ -124,7 +125,7 @@ contract CredentialContract is Ownable {
                 _revoked_conditions,
                 _suspended_conditions
             ),
-            _metadata_hash,
+            _metadata_sig,
             new address[](0)
         );
         credentials[_id] = newCredential;
@@ -135,24 +136,14 @@ contract CredentialContract is Ownable {
         bool status = credentials[_id].status == CredentialStatus.Active
             ? true
             : false;
-
         require(status, "Credential: Credential is not active");
 
-        bytes memory source = credentials[_id].metadata_hash;
-
-        bytes32 sig;
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-        assembly {
-            sig := mload(add(source, 32))
-            r := mload(add(sig, 32))
-            s := mload(add(sig, 64))
-            v := and(mload(add(sig, 65)), 255)
-        }
-
-        address recovered = ecrecover(sig, v, r, s);
-
+        (address recovered, ) = ECDSA.tryRecover(
+            ECDSA.toEthSignedMessageHash(
+                abi.encodePacked(credentials[_id].metadata_url)
+            ),
+            credentials[_id].metadata_sig
+        );
         return recovered == credentials[_id].issuer ? true : false;
     }
 
