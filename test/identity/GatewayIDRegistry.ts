@@ -18,8 +18,8 @@ describe("GatewayIDRegistry", function () {
     await registry.deployed();
   });
 
-  it("should deploy a new GatewayID contract and associate it with a provided username", async function () {
-    const GatewayID = await ethers.getContractFactory("GatewayID");
+  it("should deploy a new UserID contract and associate it with a provided username", async function () {
+    const UserID = await ethers.getContractFactory("UserID");
 
     let tx = await registry.deployIdentity(
       await signers[0].getAddress(),
@@ -27,13 +27,13 @@ describe("GatewayIDRegistry", function () {
       USERNAME
     );
     let identityAddress = await registry.getIdentity(USERNAME);
-    let identity = await GatewayID.attach(identityAddress);
+    let identity = await UserID.attach(identityAddress);
     let masterWallet = await identity.getMasterWallet();
 
     expect(masterWallet).to.equal(await signers[0].getAddress());
   });
 
-  it("should not allow deploying a GatewayID contract with a duplicate username", async function () {
+  it("should not allow deploying a UserID contract with a duplicate username", async function () {
     let id2 = registry.deployIdentity(
       await signers[2].getAddress(),
       await signers[3].getAddress(),
@@ -45,13 +45,13 @@ describe("GatewayIDRegistry", function () {
     );
   });
 
-  it("should return the address of the GatewayID contract associated with a provided username", async function () {
+  it("should return the address of the UserID contract associated with a provided username", async function () {
     let result = await registry.getIdentity(USERNAME);
 
     expect(result).to.be.properAddress;
   });
 
-  it("should return the address of the master wallet for a GatewayID contract associated with a provided username", async () => {
+  it("should return the address of the master wallet for a UserID contract associated with a provided username", async () => {
     let masterWallet = await registry.getMasterWallet(USERNAME);
 
     expect(masterWallet).to.equal(await signers[0].getAddress());

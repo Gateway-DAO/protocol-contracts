@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import "./GatewayID.sol";
+import "./UserID.sol";
 
 contract GatewayIDRegistry {
     mapping(bytes32 => address) public identities;
@@ -32,7 +32,7 @@ contract GatewayIDRegistry {
             identities[_username] == address(0),
             "GatewayIDRegistry: Username already exists"
         );
-        GatewayID newIdentity = new GatewayID(_master, _signer);
+        UserID newIdentity = new UserID(_master, _signer);
         identities[_username] = address(newIdentity);
         return true;
     }
@@ -56,7 +56,7 @@ contract GatewayIDRegistry {
         view
         returns (address)
     {
-        return GatewayID(identities[_username]).getMasterWallet();
+        return UserID(identities[_username]).getMasterWallet();
     }
 
     /**

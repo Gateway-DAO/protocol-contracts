@@ -8,7 +8,7 @@ enum Type {
   Solana,
 }
 
-describe("GatewayID", () => {
+describe("UserID", () => {
   let contract: Contract;
   let master: Signer;
   let signer: Signer;
@@ -31,14 +31,19 @@ describe("GatewayID", () => {
   });
 
   beforeEach(async () => {
-    const GatewayID = await ethers.getContractFactory("GatewayID");
-    contract = await GatewayID.deploy(master.getAddress(), signer.getAddress());
+    const UserID = await ethers.getContractFactory("UserID");
+    contract = await UserID.deploy(master.getAddress(), signer.getAddress());
   });
 
   it("Should be able to add a wallet", async () => {
-    const tx = await contract.connect(master).addEVMWallet(await other.getAddress());
+    const tx = await contract
+      .connect(master)
+      .addEVMWallet(await other.getAddress());
     const wallet = await contract.wallets[
-      ethers.utils.solidityPack(["bytes32", "address"], [ethers.utils.formatBytes32String("0x0"), await other.getAddress()])
+      ethers.utils.solidityPack(
+        ["bytes32", "address"],
+        [ethers.utils.formatBytes32String("0x0"), await other.getAddress()]
+      )
     ];
     expect(wallet.idx).to.equal(1);
     expect(wallet.wallet).to.equal(await other.getAddress());
@@ -49,13 +54,18 @@ describe("GatewayID", () => {
   });
 
   it("Should be able to remove a wallet", async () => {
-    await contract.connect(master).addEVMWallet(master_pkh, Type.EVM, { from: master });
+    await contract
+      .connect(master)
+      .addEVMWallet(master_pkh, Type.EVM, { from: master });
     const tx = await contract.removeEVMWallet(master_pkh, { from: master });
     expect(tx.logs[0].args.pkh).to.equal(master_pkh);
     expect(tx.logs[0].args.wallet).to.equal(master.getAddress());
     expect(tx.logs[0].args.wallet_type).to.equal(Type.EVM);
     const wallet = await contract.wallets(
-      ethers.utils.solidityPack(["bytes32", "address"], [master_pkh, await master.getAddress()])
+      ethers.utils.solidityPack(
+        ["bytes32", "address"],
+        [master_pkh, await master.getAddress()]
+      )
     );
     expect(wallet.wallet).to.equal(ethers.constants.AddressZero);
   });
@@ -69,38 +79,41 @@ describe("GatewayID", () => {
     expect(tx.logs[0].args.wallet).to.equal(await master.getAddress());
     expect(tx.logs[0].args.wallet_type).to.equal(Type.Email);
     const wallet = await contract.wallets(
-      ethers.utils.solidityPack(["bytes32", "address"], [master_pkh, await master.getAddress()])
+      ethers.utils.solidityPack(
+        ["bytes32", "address"],
+        [master_pkh, await master.getAddress()]
+      )
     );
     expect(wallet.wallet_type).to.equal(Type.Email);
   });
 
   it("Should only allow master wallet to add, remove, or update a wallet", async () => {
-    await contract.addEVMWallet(master_pkh, Type.EVM, {from: master});
+    await contract.addEVMWallet(master_pkh, Type.EVM, { from: master });
 
     try {
       await contract.connect(signer).addEVMWallet(signer_pkh, Type.EVM);
       assert.fail();
     } catch (err: any) {
-      expect(err.reason).to.equal("GatewayID: Not master wallet");
+      expect(err.reason).to.equal("UserID: Not master wallet");
     }
-    
+
     try {
       await contract.connect(signer).removeEVMWallet(master_pkh);
       assert.fail();
     } catch (err: any) {
-      expect(err.reason).to.equal("GatewayID: Not master wallet");
+      expect(err.reason).to.equal("UserID: Not master wallet");
     }
   });
 
   it("Should only allow member wallets to access certain functions", async () => {
-    await contract.addEVMWallet(master_pkh, Type.EVM, {from: master});
-    await contract.addEVMWallet(signer_pkh, Type.EVM, {from: signer});
-    await contract.addEVMWallet(other_pkh, Type.EVM, {from: other});
+    await contract.addEVMWallet(master_pkh, Type.EVM, { from: master });
+    await contract.addEVMWallet(signer_pkh, Type.EVM, { from: signer });
+    await contract.addEVMWallet(other_pkh, Type.EVM, { from: other });
     try {
-      await contract.functionOnlyForMembers({from: other});
+      await contract.functionOnlyForMembers({ from: other });
       assert.fail();
     } catch (err: any) {
-      expect(err.reason).to.equal("GatewayID: Not a member");
+      expect(err.reason).to.equal("UserID: Not a member");
     }
   });
 });

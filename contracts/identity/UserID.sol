@@ -4,10 +4,10 @@ pragma solidity ^0.8.17;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
- * @title GatewayID
- * @dev NatSpec documentation for the GatewayID smart contract.
+ * @title UserID
+ * @dev NatSpec documentation for the UserID smart contract.
  */
-contract GatewayID is Ownable {
+contract UserID is Ownable {
     /**
      * @dev Enum to represent the type of wallet
      */
@@ -53,7 +53,7 @@ contract GatewayID is Ownable {
         require(
             msg.sender == wallets[master_wallet_idx].wallet &&
                 wallets[master_wallet_idx].is_master == true,
-            "GatewayID: Not master wallet"
+            "UserID: Not master wallet"
         );
         _;
     }
@@ -65,7 +65,7 @@ contract GatewayID is Ownable {
         require(
             msg.sender == wallets[signer_wallet_idx].wallet ||
                 msg.sender == wallets[master_wallet_idx].wallet,
-            "GatewayID: Not signer wallet"
+            "UserID: Not signer wallet"
         );
         _;
     }
@@ -101,7 +101,7 @@ contract GatewayID is Ownable {
                 msg.sender == wallets[master_wallet_idx].wallet ||
                 wallets[abi.encodePacked(bytes32(_pkh), msg.sender)].wallet !=
                 address(0x0),
-            "GatewayID: Not a member"
+            "UserID: Not a member"
         );
         _;
     }
@@ -166,7 +166,7 @@ contract GatewayID is Ownable {
         require(
             wallets[abi.encodePacked(address(0x0), msg.sender)].wallet ==
                 address(0x0),
-            "GatewayID: Wallet already exists"
+            "UserID: Wallet already exists"
         );
 
         wallet_indices.push(abi.encodePacked(address(0x0), msg.sender));
@@ -192,11 +192,11 @@ contract GatewayID is Ownable {
 
         require(
             wallets[id].wallet_type == Type.EVM,
-            "GatewayID: Not an EVM wallet"
+            "UserID: Not an EVM wallet"
         );
         require(
             wallets[id].is_master == false,
-            "GatewayID: Cannot remove master wallet"
+            "UserID: Cannot remove master wallet"
         );
 
         bytes memory keyToMove = wallet_indices[wallet_indices.length - 1];
@@ -220,12 +220,12 @@ contract GatewayID is Ownable {
         require(
             wallets[abi.encodePacked(bytes32(0x0), _member)].wallet !=
                 address(0x0),
-            "GatewayID: Not a member"
+            "UserID: Not a member"
         );
         require(
             wallets[abi.encodePacked(bytes32(0x0), _member)].wallet_type ==
                 Type.EVM,
-            "GatewayID: Not an EVM wallet"
+            "UserID: Not an EVM wallet"
         );
 
         wallets[abi.encodePacked(bytes32(0x0), _member)].is_master = true;
