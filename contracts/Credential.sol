@@ -84,13 +84,13 @@ contract CredentialContract is Ownable {
         bytes32 _id,
         address _issuer,
         address _target,
-        string calldata _url,
+        string memory _url,
         bytes32 _dm_id,
-        string calldata _name,
-        string calldata _description,
-        string calldata _revoked_conditions,
-        string calldata _suspended_conditions,
-        bytes calldata _metadata_hash
+        string memory _name,
+        string memory _description,
+        string memory _revoked_conditions,
+        string memory _suspended_conditions,
+        bytes memory _metadata_hash
     ) public onlyOwner {
         Credential memory newCredential = Credential(
             _id,
