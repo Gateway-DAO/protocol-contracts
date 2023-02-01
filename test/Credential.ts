@@ -21,14 +21,15 @@ describe("CredentialContract", () => {
 
   it("Should be able to issue a credential", async () => {
     const id = ethers.utils.formatBytes32String("1234567890");
-    const url = ethers.utils.formatBytes32String("https://example.com");
+    const url = "https://example.com";
     const dm_id = ethers.utils.formatBytes32String("0987654321");
-    const name = ethers.utils.formatBytes32String("Example Credential");
-    const description = ethers.utils.formatBytes32String(
-      "This is an example credential"
-    );
-    const metadata_hash =
-      "0x0000000000000000000000000000000000000000000000000000000000000001";
+    const name = "Example Credential";
+    const description = "This is an example credential";
+    const revoked_conditions =
+      "This credential will be revoked if the user is above 21 years old.";
+    const suspended_conditions =
+      "This credential will be suspended if the user is above 21 years old.";
+    const metadata_sig = await signers[0].signMessage(url);
 
     await contract.issueCredential(
       id,
@@ -38,7 +39,9 @@ describe("CredentialContract", () => {
       dm_id,
       name,
       description,
-      metadata_hash
+      revoked_conditions,
+      suspended_conditions,
+      metadata_sig
     );
 
     const credential = await contract.credentials(id);
@@ -50,21 +53,26 @@ describe("CredentialContract", () => {
     expect(credential.status).to.equal(0);
     expect(credential.context.name).to.equal(name);
     expect(credential.context.description).to.equal(description);
-    expect(credential.metadata_hash).to.equal(metadata_hash);
+    expect(credential.context.revoked_conditions).to.equal(revoked_conditions);
+    expect(credential.context.suspended_conditions).to.equal(
+      suspended_conditions
+    );
+    expect(credential.metadata_sig).to.equal(metadata_sig);
   });
 
   it("Should only be able to be issued by the contract owner", async () => {
     const signer = await signers[2];
 
     const id = ethers.utils.formatBytes32String("1234567890");
-    const url = ethers.utils.formatBytes32String("https://example.com");
+    const url = "https://example.com";
     const dm_id = ethers.utils.formatBytes32String("0987654321");
-    const name = ethers.utils.formatBytes32String("Example Credential");
-    const description = ethers.utils.formatBytes32String(
-      "This is an example credential"
-    );
-    const metadata_hash =
-      "0x0000000000000000000000000000000000000000000000000000000000000001";
+    const name = "Example Credential";
+    const description = "This is an example credential";
+    const revoked_conditions =
+      "This credential will be revoked if the user is above 21 years old.";
+    const suspended_conditions =
+      "This credential will be suspended if the user is above 21 years old.";
+    const metadata_sig = await signers[0].signMessage(url);
 
     await expect(
       contract
@@ -77,21 +85,24 @@ describe("CredentialContract", () => {
           dm_id,
           name,
           description,
-          metadata_hash
+          revoked_conditions,
+          suspended_conditions,
+          metadata_sig
         )
     ).to.be.revertedWith("Ownable: caller is not the owner");
   });
 
   it("Should be able to check if a credential is valid", async () => {
     const id = ethers.utils.formatBytes32String("1234567890");
-    const url = ethers.utils.formatBytes32String("https://example.com");
+    const url = "https://example.com";
     const dm_id = ethers.utils.formatBytes32String("0987654321");
-    const name = ethers.utils.formatBytes32String("Example Credential");
-    const description = ethers.utils.formatBytes32String(
-      "This is an example credential"
-    );
-    const metadata_hash =
-      "0x0000000000000000000000000000000000000000000000000000000000000001";
+    const name = "Example Credential";
+    const description = "This is an example credential";
+    const revoked_conditions =
+      "This credential will be revoked if the user is above 21 years old.";
+    const suspended_conditions =
+      "This credential will be suspended if the user is above 21 years old.";
+    const metadata_sig = await signers[0].signMessage(url);
 
     await contract.issueCredential(
       id,
@@ -101,7 +112,9 @@ describe("CredentialContract", () => {
       dm_id,
       name,
       description,
-      metadata_hash
+      revoked_conditions,
+      suspended_conditions,
+      metadata_sig
     );
 
     const isValid = await contract.isValid(id);
@@ -110,14 +123,15 @@ describe("CredentialContract", () => {
 
   it("Should not be able to check if an inactive credential is valid", async () => {
     const id = ethers.utils.formatBytes32String("1234567890");
-    const url = ethers.utils.formatBytes32String("https://example.com");
+    const url = "https://example.com";
     const dm_id = ethers.utils.formatBytes32String("0987654321");
-    const name = ethers.utils.formatBytes32String("Example Credential");
-    const description = ethers.utils.formatBytes32String(
-      "This is an example credential"
-    );
-    const metadata_hash =
-      "0x0000000000000000000000000000000000000000000000000000000000000001";
+    const name = "Example Credential";
+    const description = "This is an example credential";
+    const revoked_conditions =
+      "This credential will be revoked if the user is above 21 years old.";
+    const suspended_conditions =
+      "This credential will be suspended if the user is above 21 years old.";
+    const metadata_sig = await signers[0].signMessage(url);
 
     await contract.issueCredential(
       id,
@@ -127,7 +141,9 @@ describe("CredentialContract", () => {
       dm_id,
       name,
       description,
-      metadata_hash
+      revoked_conditions,
+      suspended_conditions,
+      metadata_sig
     );
 
     //revoke the credential here
