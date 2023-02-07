@@ -68,6 +68,17 @@ contract CredentialContract is Ownable {
     mapping(bytes32 => Credential) public credentials;
     mapping(bytes32 => mapping(uint256 => CredentialLog)) public credentialLogs;
 
+    /**
+     * @dev Modifiers
+     */
+    modifier onlyIssuer(bytes32 _id) {
+        require(
+            msg.sender == credentials[_id].issuer,
+            "Credential: Only issuer can call this function"
+        );
+        _;
+    }
+
     function createLog(
         bytes32 _id,
         string memory _url,
@@ -93,6 +104,11 @@ contract CredentialContract is Ownable {
         string memory _suspended_conditions,
         bytes memory _metadata_sig
     ) public onlyOwner {
+        require(
+            credentials[_id].status == CredentialStatus.Invalid,
+            "Credential: Credential already exists"
+        );
+
         Credential memory newCredential = Credential(
             _id,
             _issuer,
@@ -148,13 +164,30 @@ contract CredentialContract is Ownable {
         return recovered == credentials[_id].issuer ? true : false;
     }
 
-    function revokeCredential(bytes32 _id) public {
+    function reactivateCredential(bytes32 _id) public onlyIssuer(_id) {
         require(
-            msg.sender == credentials[_id].issuer,
-            "Only issuer can revoke credential"
+            credentials[_id].status == CredentialStatus.Suspended,
+            "Credential: Credential is not suspended"
         );
+        credentials[_id].status = CredentialStatus.Active;
+        createLog(_id, credentials[_id].metadata_url, CredentialStatus.Active);
+    }
+
+    function revokeCredential(bytes32 _id) public onlyIssuer(_id) {
+        require(
+            credentials[_id].status == CredentialStatus.Active,
+            "Credential: Credential is not active");
         emit CredentialRevoked(_id);
         credentials[_id].status = CredentialStatus.Revoked;
         createLog(_id, credentials[_id].metadata_url, CredentialStatus.Revoked);
+    }
+
+    function suspendCredential(bytes32 _id) public onlyIssuer(_id) {
+        require(
+            credentials[_id].status == CredentialStatus.Active,
+            "Credential: Credential is not active"
+        );
+        credentials[_id].status = CredentialStatus.Suspended;
+        createLog(_id, credentials[_id].metadata_url, CredentialStatus.Suspended);
     }
 }
