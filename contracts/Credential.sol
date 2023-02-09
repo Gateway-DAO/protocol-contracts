@@ -140,12 +140,7 @@ contract CredentialContract is Ownable {
             CredentialStatus.Active,
             block.timestamp,
             _expire_date,
-            CredentialContext(
-                _name,
-                _description,
-                _revoked_conditions,
-                _suspended_conditions
-            ),
+            newCredential.context,
             _metadata_sig,
             new address[](0)
         );
