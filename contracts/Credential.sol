@@ -11,6 +11,11 @@ contract CredentialContract is Ownable {
         Invalid
     }
 
+    enum LogEffect {
+        CreatedCredential,
+        ChangedStatus
+    }
+
     struct CredentialContext {
         string name;
         string description;
@@ -63,12 +68,14 @@ contract CredentialContract is Ownable {
     );
 
     event CredentialRevoked(string id);
+    event CredentialSuspended(string id);
+    event CredentialReactivated(string id);
+
 
     /**
      * @dev Credential mapping
      */
     mapping(string => Credential) public credentials;
-    mapping(string => mapping(uint256 => CredentialLog)) public credentialLogs;
 
     /**
      * @dev Modifiers
@@ -79,19 +86,6 @@ contract CredentialContract is Ownable {
             "Credential: Only issuer can call this function"
         );
         _;
-    }
-
-    function createLog(
-        string memory _id,
-        string memory _url,
-        CredentialStatus _status
-    ) private {
-        uint256 timestamp = block.timestamp;
-        credentialLogs[_id][timestamp] = CredentialLog(
-            _url,
-            timestamp,
-            _status
-        );
     }
 
     function issueCredential(
@@ -145,7 +139,6 @@ contract CredentialContract is Ownable {
             new address[](0)
         );
         credentials[_id] = newCredential;
-        createLog(_id, newCredential.metadata_url, CredentialStatus.Active);
     }
 
     function isValid(string memory _id) public view returns (bool) {
@@ -169,17 +162,18 @@ contract CredentialContract is Ownable {
             credentials[_id].status == CredentialStatus.Suspended,
             "Credential: Credential is not suspended"
         );
+
         credentials[_id].status = CredentialStatus.Active;
-        createLog(_id, credentials[_id].metadata_url, CredentialStatus.Active);
+        emit CredentialReactivated(_id);
     }
 
     function revokeCredential(string memory _id) public onlyIssuer(_id) {
         require(
             credentials[_id].status == CredentialStatus.Active,
             "Credential: Credential is not active");
-        emit CredentialRevoked(_id);
+        
         credentials[_id].status = CredentialStatus.Revoked;
-        createLog(_id, credentials[_id].metadata_url, CredentialStatus.Revoked);
+        emit CredentialRevoked(_id);
     }
 
     function suspendCredential(string memory _id) public onlyIssuer(_id) {
@@ -187,7 +181,8 @@ contract CredentialContract is Ownable {
             credentials[_id].status == CredentialStatus.Active,
             "Credential: Credential is not active"
         );
+
         credentials[_id].status = CredentialStatus.Suspended;
-        createLog(_id, credentials[_id].metadata_url, CredentialStatus.Suspended);
+        emit CredentialSuspended(_id);
     }
 }
