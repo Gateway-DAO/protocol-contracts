@@ -21,7 +21,7 @@ describe("GatewayIDRegistry", function () {
   it("should deploy a new UserID contract and associate it with a provided username", async function () {
     const UserID = await ethers.getContractFactory("UserID");
 
-    let tx = await registry.deployIdentity(
+    let tx = await registry.deployUserID(
       await signers[0].getAddress(),
       await signers[1].getAddress(),
       USERNAME
@@ -34,7 +34,7 @@ describe("GatewayIDRegistry", function () {
   });
 
   it("should not allow deploying a UserID contract with a duplicate username", async function () {
-    let id2 = registry.deployIdentity(
+    let id2 = registry.deployUserID(
       await signers[2].getAddress(),
       await signers[3].getAddress(),
       USERNAME
@@ -52,7 +52,7 @@ describe("GatewayIDRegistry", function () {
   });
 
   it("should return the address of the master wallet for a UserID contract associated with a provided username", async () => {
-    let masterWallet = await registry.getMasterWallet(USERNAME);
+    let masterWallet = await registry.getUserIDMasterWallet(USERNAME);
 
     expect(masterWallet).to.equal(await signers[0].getAddress());
   });

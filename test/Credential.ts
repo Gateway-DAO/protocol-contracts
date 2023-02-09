@@ -20,9 +20,9 @@ describe("CredentialContract", () => {
   });
 
   it("Should be able to issue a credential", async () => {
-    const id = ethers.utils.formatBytes32String("1234567890");
+    const id = "1234567890";
     const url = "https://example.com";
-    const dm_id = ethers.utils.formatBytes32String("0987654321");
+    const dm_id = "0987654321";
     const name = "Example Credential";
     const description = "This is an example credential";
     const revoked_conditions =
@@ -63,9 +63,9 @@ describe("CredentialContract", () => {
   it("Should only be able to be issued by the contract owner", async () => {
     const signer = await signers[2];
 
-    const id = ethers.utils.formatBytes32String("1234567890");
+    const id = "1234567890";
     const url = "https://example.com";
-    const dm_id = ethers.utils.formatBytes32String("0987654321");
+    const dm_id = "0987654321";
     const name = "Example Credential";
     const description = "This is an example credential";
     const revoked_conditions =
@@ -93,9 +93,9 @@ describe("CredentialContract", () => {
   });
 
   it("Should be able to check if a credential is valid", async () => {
-    const id = ethers.utils.formatBytes32String("1234567890");
+    const id = "1234567890";
     const url = "https://example.com";
-    const dm_id = ethers.utils.formatBytes32String("0987654321");
+    const dm_id = "0987654321";
     const name = "Example Credential";
     const description = "This is an example credential";
     const revoked_conditions =
@@ -122,9 +122,9 @@ describe("CredentialContract", () => {
   });
 
   it("Should not be able to check if an inactive credential is valid", async () => {
-    const id = ethers.utils.formatBytes32String("1234567890");
+    const id = "1234567890";
     const url = "https://example.com";
-    const dm_id = ethers.utils.formatBytes32String("0987654321");
+    const dm_id = "0987654321";
     const name = "Example Credential";
     const description = "This is an example credential";
     const revoked_conditions =

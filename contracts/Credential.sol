@@ -22,13 +22,14 @@ contract CredentialContract is Ownable {
      * @dev Credential struct
      */
     struct Credential {
-        bytes32 id;
+        string id;
         address issuer;
         address target;
         string metadata_url;
-        bytes32 dm_id;
+        string dm_id;
         CredentialStatus status;
         uint256 timestamp;
+        uint256 expire_date;
         CredentialContext context;
         bytes metadata_sig;
         address[] permissions;
@@ -48,30 +49,31 @@ contract CredentialContract is Ownable {
      */
 
     event CredentialIssued(
-        bytes32 id,
+        string id,
         address issuer,
         address target,
         string url,
-        bytes32 dm_id,
+        string dm_id,
         CredentialStatus status,
         uint256 timestamp,
+        uint256 expire_date,
         CredentialContext context,
         bytes metadata_sig,
         address[] permissions
     );
 
-    event CredentialRevoked(bytes32 id);
+    event CredentialRevoked(string id);
 
     /**
      * @dev Credential mapping
      */
-    mapping(bytes32 => Credential) public credentials;
-    mapping(bytes32 => mapping(uint256 => CredentialLog)) public credentialLogs;
+    mapping(string => Credential) public credentials;
+    mapping(string => mapping(uint256 => CredentialLog)) public credentialLogs;
 
     /**
      * @dev Modifiers
      */
-    modifier onlyIssuer(bytes32 _id) {
+    modifier onlyIssuer(string memory _id) {
         require(
             msg.sender == credentials[_id].issuer,
             "Credential: Only issuer can call this function"
@@ -80,7 +82,7 @@ contract CredentialContract is Ownable {
     }
 
     function createLog(
-        bytes32 _id,
+        string memory _id,
         string memory _url,
         CredentialStatus _status
     ) private {
@@ -93,11 +95,12 @@ contract CredentialContract is Ownable {
     }
 
     function issueCredential(
-        bytes32 _id,
+        string memory _id,
         address _issuer,
         address _target,
         string memory _url,
-        bytes32 _dm_id,
+        string memory _dm_id,
+        uint256 _expire_date,
         string memory _name,
         string memory _description,
         string memory _revoked_conditions,
@@ -105,7 +108,7 @@ contract CredentialContract is Ownable {
         bytes memory _metadata_sig
     ) public onlyOwner {
         require(
-            credentials[_id].status == CredentialStatus.Invalid,
+            keccak256(bytes(credentials[_id].id)) != keccak256(bytes(_id)),
             "Credential: Credential already exists"
         );
 
@@ -117,6 +120,7 @@ contract CredentialContract is Ownable {
             _dm_id,
             CredentialStatus.Active,
             block.timestamp,
+            _expire_date,
             CredentialContext(
                 _name,
                 _description,
@@ -132,9 +136,10 @@ contract CredentialContract is Ownable {
             _issuer,
             _target,
             _url,
-            keccak256(abi.encodePacked(_dm_id)),
+            _dm_id,
             CredentialStatus.Active,
             block.timestamp,
+            _expire_date,
             CredentialContext(
                 _name,
                 _description,
@@ -148,7 +153,7 @@ contract CredentialContract is Ownable {
         createLog(_id, newCredential.metadata_url, CredentialStatus.Active);
     }
 
-    function isValid(bytes32 _id) public view returns (bool) {
+    function isValid(string memory _id) public view returns (bool) {
         bool status = credentials[_id].status == CredentialStatus.Active
             ? true
             : false;
@@ -164,7 +169,7 @@ contract CredentialContract is Ownable {
         return recovered == credentials[_id].issuer ? true : false;
     }
 
-    function reactivateCredential(bytes32 _id) public onlyIssuer(_id) {
+    function reactivateCredential(string memory _id) public onlyIssuer(_id) {
         require(
             credentials[_id].status == CredentialStatus.Suspended,
             "Credential: Credential is not suspended"
@@ -173,7 +178,7 @@ contract CredentialContract is Ownable {
         createLog(_id, credentials[_id].metadata_url, CredentialStatus.Active);
     }
 
-    function revokeCredential(bytes32 _id) public onlyIssuer(_id) {
+    function revokeCredential(string memory _id) public onlyIssuer(_id) {
         require(
             credentials[_id].status == CredentialStatus.Active,
             "Credential: Credential is not active");
@@ -182,7 +187,7 @@ contract CredentialContract is Ownable {
         createLog(_id, credentials[_id].metadata_url, CredentialStatus.Revoked);
     }
 
-    function suspendCredential(bytes32 _id) public onlyIssuer(_id) {
+    function suspendCredential(string memory _id) public onlyIssuer(_id) {
         require(
             credentials[_id].status == CredentialStatus.Active,
             "Credential: Credential is not active"

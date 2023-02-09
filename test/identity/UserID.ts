@@ -27,6 +27,11 @@ describe("UserID", () => {
     contract = await UserID.deploy(master.getAddress(), signer.getAddress());
   });
 
+  it("Should be able to create a new UserID", async () => {
+    expect(await contract.getMasterWallet()).to.equal(await master.getAddress());
+    expect(await contract.noOfWallets()).to.equal(2);
+  });
+
   it("Should be able to add a wallet", async () => {
     const tx = await contract
       .connect(master)
