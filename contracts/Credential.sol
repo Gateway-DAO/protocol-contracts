@@ -88,6 +88,14 @@ contract CredentialContract is Ownable {
         _;
     }
 
+    modifier onlyIssuerOrAuthorized(string memory _id) {
+        require(
+            msg.sender == credentials[_id].issuer || msg.sender == owner(),
+            "Credential: Only issuer or authorized can call this function"
+        );
+        _;
+    }
+
     function issueCredential(
         string memory _id,
         address _issuer,
@@ -157,7 +165,7 @@ contract CredentialContract is Ownable {
         return recovered == credentials[_id].issuer ? true : false;
     }
 
-    function reactivateCredential(string memory _id) public onlyIssuer(_id) {
+    function reactivateCredential(string memory _id) public onlyIssuerOrAuthorized(_id) {
         require(
             credentials[_id].status == CredentialStatus.Suspended,
             "Credential: Credential is not suspended"
@@ -167,7 +175,7 @@ contract CredentialContract is Ownable {
         emit CredentialReactivated(_id);
     }
 
-    function revokeCredential(string memory _id) public onlyIssuer(_id) {
+    function revokeCredential(string memory _id) public onlyIssuerOrAuthorized(_id) {
         require(
             credentials[_id].status == CredentialStatus.Active,
             "Credential: Credential is not active");
@@ -176,7 +184,7 @@ contract CredentialContract is Ownable {
         emit CredentialRevoked(_id);
     }
 
-    function suspendCredential(string memory _id) public onlyIssuer(_id) {
+    function suspendCredential(string memory _id) public onlyIssuerOrAuthorized(_id) {
         require(
             credentials[_id].status == CredentialStatus.Active,
             "Credential: Credential is not active"
