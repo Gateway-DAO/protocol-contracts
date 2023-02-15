@@ -1,38 +1,39 @@
 {
-  "name": "protocol-contracts",
-  "version": "1.0.0",
-  "description": "Gateway Protocol contracts (in Solidity)",
-  "repository": "git@github.com:Gateway-DAO/protocol-contracts.git",
-  "author": "Nuno Carvalho <nunoormaker21@gmail.com>",
-  "license": "MIT",
-  "scripts": {
-    "slither": "slither . --solc-remaps '@openzeppelin=node_modules/@openzeppelin @chainlink=node_modules/@chainlink' --exclude naming-convention,external-function,low-level-calls"
-  },
-  "dependencies": {
-    "@openzeppelin/contracts": "^4.8.0",
-    "dotenv": "^16.0.3"
-  },
-  "devDependencies": {
-    "@ethersproject/abi": "^5.4.7",
-    "@ethersproject/providers": "^5.4.7",
-    "@nomicfoundation/hardhat-chai-matchers": "^1.0.0",
-    "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
-    "@nomicfoundation/hardhat-toolbox": "^2.0.0",
-    "@nomiclabs/hardhat-ethers": "^2.0.0",
-    "@nomiclabs/hardhat-etherscan": "^3.0.0",
-    "@typechain/ethers-v5": "^10.1.0",
-    "@typechain/hardhat": "^6.1.2",
-    "@types/chai": "^4.2.0",
-    "@types/mocha": "^9.1.0",
-    "@types/node": ">=12.0.0",
-    "chai": "^4.2.0",
-    "ethers": "^5.4.7",
-    "hardhat": "^2.11.1",
-    "hardhat-deploy": "^0.11.22",
-    "hardhat-gas-reporter": "^1.0.8",
-    "solidity-coverage": "^0.8.0",
-    "ts-node": ">=8.0.0",
-    "typechain": "^8.1.0",
-    "typescript": ">=4.5.0"
-  }
+    "name": "protocol-contracts",
+    "version": "1.0.0",
+    "description": "Gateway Protocol contracts (in Solidity)",
+    "repository": "git@github.com:Gateway-DAO/protocol-contracts.git",
+    "author": "Nuno Carvalho <nunoormaker21@gmail.com>",
+    "license": "MIT",
+    "scripts": {
+        "slither": "slither . --solc-remaps '@openzeppelin=node_modules/@openzeppelin @chainlink=node_modules/@chainlink' --exclude naming-convention,external-function,low-level-calls",
+        "test": "hardhat test"
+    },
+    "dependencies": {
+        "@openzeppelin/contracts": "^4.8.0",
+        "dotenv": "^16.0.3"
+    },
+    "devDependencies": {
+        "@ethersproject/abi": "^5.4.7",
+        "@ethersproject/providers": "^5.4.7",
+        "@nomicfoundation/hardhat-chai-matchers": "^1.0.0",
+        "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
+        "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+        "@nomiclabs/hardhat-ethers": "^2.0.0",
+        "@nomiclabs/hardhat-etherscan": "^3.0.0",
+        "@typechain/ethers-v5": "^10.1.0",
+        "@typechain/hardhat": "^6.1.2",
+        "@types/chai": "^4.2.0",
+        "@types/mocha": "^9.1.0",
+        "@types/node": ">=12.0.0",
+        "chai": "^4.2.0",
+        "ethers": "^5.4.7",
+        "hardhat": "^2.11.1",
+        "hardhat-deploy": "^0.11.22",
+        "hardhat-gas-reporter": "^1.0.8",
+        "solidity-coverage": "^0.8.0",
+        "ts-node": ">=8.0.0",
+        "typechain": "^8.1.0",
+        "typescript": ">=4.5.0"
+    }
 }
