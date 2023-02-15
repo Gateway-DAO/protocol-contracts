@@ -5,8 +5,12 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 
-contract CredentialNFT is ERC721, ERC721URIStorage, Ownable {
+// TODO - Add Pausable
+// TODO - Add Counter to TokenId
+
+contract CredentialNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
     mapping (string => address) private credentialToMinter;
     mapping (string => bytes) private credentialToMetadataSig;
 
@@ -20,13 +24,17 @@ contract CredentialNFT is ERC721, ERC721URIStorage, Ownable {
         credentialToMinter[_credentialId] = _minter;
     }
 
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721, ERC721Enumerable) returns (bool) {
+        return super.supportsInterface(interfaceId);
+    }
+
     function removeMinter(string memory _credentialId, address _minter) external onlyOwner {
         require(credentialToMinter[_credentialId] == _minter, "CredentialNFT: Minter is not registered for this credential");
         delete credentialToMinter[_credentialId];
         emit MinterRemoved(_credentialId, _minter);
     }
 
-    function _beforeTokenTransfer(address from, address to, uint256 tokenId, uint256 batchSize) override internal {
+    function _beforeTokenTransfer(address from, address to, uint256 tokenId, uint256 batchSize) override(ERC721, ERC721Enumerable) internal {
         require(from == address(0) || to == address(0), "CredentialNFT: You cannot transfer the NFT to other accounts.");
         super._beforeTokenTransfer(from, to, tokenId, batchSize);
     }
@@ -74,6 +82,5 @@ contract CredentialNFT is ERC721, ERC721URIStorage, Ownable {
         _setTokenURI(tokenId, _tokenURI);
 
         emit CredentialMinted(_credentialId, msg.sender, tokenId);
-    }
-    
+    }   
 }
