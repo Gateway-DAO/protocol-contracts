@@ -6,25 +6,42 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 
-// TODO - Add Pausable
-// TODO - Add Counter to TokenId
+contract CredentialNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, AccessControl, Pausable {
+    using Counters for Counters.Counter;
+    Counters.Counter private _tokenIdTracker;
 
-contract CredentialNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+
     mapping (string => address) private credentialToMinter;
     mapping (string => bytes) private credentialToMetadataSig;
+    mapping (uint256 => string) private _tokenIdToCredentialId;
 
     event CredentialMinted(string indexed credentialId, address indexed minter, uint256 indexed tokenId);
     event MinterRemoved(string indexed credentialId, address indexed minter);
     event MinterRegistered(string indexed credentialId, address indexed minter);
 
-    constructor(string memory _name, string memory _symbol) ERC721(_name, _symbol) {}
+    constructor(string memory _name, string memory _symbol) ERC721(_name, _symbol) {
+        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        _setupRole(MINTER_ROLE, _msgSender());
+    }
+
+    function pause() public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _pause();
+    }
+
+    function unpause() public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _unpause();
+    }
 
     function setMinter(string memory _credentialId, address _minter) internal onlyOwner {
         credentialToMinter[_credentialId] = _minter;
     }
 
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721, ERC721Enumerable) returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721, ERC721Enumerable, AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 
@@ -70,17 +87,18 @@ contract CredentialNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
     }
 
     function mintNFT(string memory _credentialId, string memory _tokenURI, bytes memory _metadataSig) external {
-        require(credentialToMinter[_credentialId] == msg.sender, "CredentialNFT: Only the registered minter can mint NFTs for this credential");
+        require(_msgSender() == credentialToMinter[_credentialId], "CredentialNFT: Only the registered minter can mint NFTs for this credential");
 
         // Ensure the credential is valid
         require(isValid(_tokenURI, _metadataSig), "CredentialNFT: Invalid metadata");
 
         // Mint the NFT and transfer it to the minter
-        uint256 tokenId = uint256(keccak256(abi.encodePacked(_credentialId, msg.sender, block.timestamp)));
+        uint256 tokenId = _tokenIdTracker.current();
+        _tokenIdTracker.increment();
 
-        _safeMint(msg.sender, tokenId);
+        _safeMint(_msgSender(), tokenId);
         _setTokenURI(tokenId, _tokenURI);
 
-        emit CredentialMinted(_credentialId, msg.sender, tokenId);
+        emit CredentialMinted(_credentialId, _msgSender(), tokenId);
     }   
 }
