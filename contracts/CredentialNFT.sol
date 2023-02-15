@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 contract CredentialNFT is ERC721, Ownable {
     mapping (string => address) private credentialToMinter;
     mapping (string => bytes) private credentialToMetadataSig;
+    mapping (address => bool) private whitelist;
 
     event CredentialMinted(string indexed credentialId, address indexed minter, uint256 indexed tokenId);
     event MinterRemoved(string indexed credentialId, address indexed minter);
@@ -26,6 +27,11 @@ contract CredentialNFT is ERC721, Ownable {
         emit MinterRemoved(_credentialId, _minter);
     }
 
+    function _beforeTokenTransfer(address from, address to, uint256 tokenId, uint256 batchSize) override internal {
+        require(from == address(0) || to == address(0), "This a Soulbound token. It cannot be transferred. It can only be burned by the token owner.");
+        super._beforeTokenTransfer(from, to, tokenId, batchSize);
+    }
+
     function registerCredential(string memory _credentialId, string memory _metadataUrl, bytes memory _metadataSig) external {
         // Verify the metadata signature
         (address recovered, ) = ECDSA.tryRecover(
@@ -38,6 +44,11 @@ contract CredentialNFT is ERC721, Ownable {
         setMinter(_credentialId, msg.sender);
         credentialToMetadataSig[_credentialId] = _metadataSig; // added
         emit CredentialRegistered(_credentialId, msg.sender);
+    }
+
+    function addToWhitelist(address _address) external onlyOwner {
+        require(_address != address(0), "CredentialNFT: Address cannot be the zero address");
+        whitelist[_address] = true;
     }
 
     function isValid(string memory _credentialId) public view returns (bool) {
@@ -56,6 +67,7 @@ contract CredentialNFT is ERC721, Ownable {
     }
 
     function mintNFT(string memory _credentialId) external {
+        require(whitelist[msg.sender], "CredentialNFT: Only whitelisted addresses can mint NFTs");
         require(credentialToMinter[_credentialId] == msg.sender, "CredentialNFT: Only the registered minter can mint NFTs for this credential");
 
         // Ensure the credential is valid
