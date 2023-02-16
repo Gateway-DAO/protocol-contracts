@@ -2,6 +2,7 @@ import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-deploy";
 import { getDeployerAccount, getNodeURL } from "./utils/network";
+import "@nomiclabs/hardhat-ganache";
 
 const config: HardhatUserConfig = {
     solidity: {
@@ -28,6 +29,7 @@ const config: HardhatUserConfig = {
         },
     },
     networks: {
+        hardhat: {},
         goerli: {
             url: getNodeURL("goerli"),
             accounts: [process.env.PRIVATE_KEY as string],
@@ -39,6 +41,13 @@ const config: HardhatUserConfig = {
         mumbai: {
             url: getNodeURL("mumbai"),
             accounts: [process.env.PRIVATE_KEY as string],
+        },
+        ganache: {
+            url: process.env.GANACHE_URL || "http://localhost:7545",
+            accounts: {
+                mnemonic: process.env.GANACHE_MNEMONIC,
+            },
+            chainId: 1337,
         },
     },
 };
