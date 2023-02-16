@@ -1,5 +1,5 @@
-import 'dotenv/config';
-import { ethers } from 'ethers';
+import "dotenv/config";
+import { ethers } from "ethers";
 
 /**
  * It returns the address of the account that will deploy the contract
@@ -9,12 +9,19 @@ export function getDeployerAccount(): string {
     const PRIVATE_KEY = process.env.PRIVATE_KEY;
 
     if (!PRIVATE_KEY) {
-        throw new Error('PRIVATE_KEY is not defined');
+        throw new Error("PRIVATE_KEY is not defined");
     }
 
     const account = new ethers.Wallet(PRIVATE_KEY);
 
     return account.address;
+}
+
+export function getGanacheAccount(): string {
+    const MNEMONIC = process.env.GANACHE_MNEMONIC as string;
+    const wallet = ethers.Wallet.fromMnemonic(MNEMONIC, `m/44'/60'/0'/0/0`);
+
+    return wallet.address;
 }
 
 /**
@@ -23,10 +30,10 @@ export function getDeployerAccount(): string {
  * @returns The URL of the node.
  */
 export function getNodeURL(network: string): string {
-    const URL = process.env[network.toUpperCase() + '_NODE'];
+    const URL = process.env[network.toUpperCase() + "_NODE"];
 
     if (!URL) {
-        throw new Error('URL is not defined');
+        throw new Error("URL is not defined");
     }
 
     return URL;

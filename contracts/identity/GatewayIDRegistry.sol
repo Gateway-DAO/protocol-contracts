@@ -3,8 +3,9 @@ pragma solidity ^0.8.17;
 
 import "./UserID.sol";
 import "./OrgID.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract GatewayIDRegistry {
+contract GatewayIDRegistry is Ownable {
     /*
      * @dev Storage
      */
@@ -29,6 +30,10 @@ contract GatewayIDRegistry {
      */
     event IdentityDeployed(string indexed _username, address indexed _identity);
     event IdentityDeleted(string indexed _username, address indexed _identity);
+
+    function setFactoryAddress(address _factory) public onlyOwner {
+        NFT_FACTORY = _factory;
+    }
 
     /**
      * deployUserID - deploys a new GatewayID contract and associates it with a provided username

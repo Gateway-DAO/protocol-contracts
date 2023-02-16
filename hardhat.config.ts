@@ -1,8 +1,12 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-deploy";
-import { getDeployerAccount, getNodeURL } from "./utils/network";
 import "@nomiclabs/hardhat-ganache";
+import {
+    getDeployerAccount,
+    getNodeURL,
+    getGanacheAccount,
+} from "./utils/network";
 
 const config: HardhatUserConfig = {
     solidity: {
@@ -26,6 +30,7 @@ const config: HardhatUserConfig = {
     namedAccounts: {
         deployer: {
             default: getDeployerAccount(),
+            ganache: getGanacheAccount(),
         },
     },
     networks: {
