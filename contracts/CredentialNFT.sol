@@ -29,6 +29,10 @@ contract CredentialNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, A
         _setupRole(MINTER_ROLE, _msgSender());
     }
 
+    function getMinter(string memory _credentialId) public view returns (address) {
+        return credentialToMinter[_credentialId];
+    }
+
     function pause() public onlyRole(DEFAULT_ADMIN_ROLE) {
         _pause();
     }

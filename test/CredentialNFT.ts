@@ -1,15 +1,13 @@
-import { Contract, Signer } from "ethers";
+import { Contract } from "ethers";
 import { assert, expect } from "chai";
 import { ethers } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 describe("CredentialNFTContract", () => {
     let credentialNFT: Contract;
-    let signers: SignerWithAddress[];
     let owner: SignerWithAddress;
     let minter: SignerWithAddress;
     let recipient: SignerWithAddress;
-    let anotherMinter: SignerWithAddress;
     let credentialId: string;
     let tokenURI: string;
     let metadataSig: string;
@@ -27,6 +25,43 @@ describe("CredentialNFTContract", () => {
         metadataSig = await owner.signMessage(tokenURI);
 
         await credentialNFT.registerCredential(credentialId, minter.address);
+    });
+
+    it("should pause and unpause the contract", async function () {
+        await credentialNFT.pause();
+        assert.equal(await credentialNFT.paused(), true);
+
+        await credentialNFT.unpause();
+        assert.equal(await credentialNFT.paused(), false);
+    });
+
+    it("should remove a minter", async function () {
+        await credentialNFT.removeMinter(credentialId, minter.address);
+
+        await expect(
+            credentialNFT
+                .connect(minter)
+                .mintNFT(credentialId, tokenURI, metadataSig)
+        ).to.be.revertedWith(
+            "CredentialNFT: Only the registered minter can mint NFTs for this credential"
+        );
+    });
+
+    it("should allow register a new credential", async function () {
+        await credentialNFT.registerCredential(credentialId, recipient.address);
+
+        const minter = await credentialNFT.getMinter(credentialId);
+
+        expect(minter).to.be.properAddress;
+        expect(minter).to.be.equal(recipient.address);
+    });
+
+    it("should not allow register a new credential if the sender is not the owner", async function () {
+        await expect(
+            credentialNFT
+                .connect(recipient)
+                .registerCredential(credentialId, recipient.address)
+        ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("should not allow non-minters to mint NFTs", async function () {
@@ -49,24 +84,11 @@ describe("CredentialNFTContract", () => {
         ).to.be.revertedWith("CredentialNFT: Invalid metadata");
     });
 
-    it("should remove a minter", async function () {
-        await credentialNFT.removeMinter(credentialId, minter.address);
-
-        await expect(
-            credentialNFT
-                .connect(minter)
-                .mintNFT(credentialId, tokenURI, metadataSig)
-        ).to.be.revertedWith(
-            "CredentialNFT: Only the registered minter can mint NFTs for this credential"
-        );
-    });
-
-    it("should pause and unpause the contract", async function () {
-        await credentialNFT.pause();
-        assert.equal(await credentialNFT.paused(), true);
-
-        await credentialNFT.unpause();
-        assert.equal(await credentialNFT.paused(), false);
+    it("should be possible to mint with the valid metadata", async function () {
+        await credentialNFT.registerCredential(credentialId, recipient.address);
+        await credentialNFT
+            .connect(recipient)
+            .mintNFT(credentialId, tokenURI, metadataSig);
     });
 
     it("should return the total supply of NFTs", async function () {
