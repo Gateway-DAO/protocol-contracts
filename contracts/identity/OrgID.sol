@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
+import "../CredentialNFTFactory.sol";
+
 /**
  * @title GatewayID
  * @dev NatSpec documentation for the GatewayID smart contract.
@@ -12,6 +14,9 @@ contract OrgID {
     mapping(address => bool) internal members;
     address owner;
     uint256 public member_count;
+
+    address public NFT_FACTORY;
+    address public CREDENTIAL_NFT;
 
     /**
      * @dev Modifier to ensure that only the owner can execute the function
@@ -46,7 +51,7 @@ contract OrgID {
     /**
      * @dev Constructor to initialize the master wallet index
      */
-    constructor(address _owner, address[] memory _signers) {
+    constructor(address _owner, address[] memory _signers, address _nftFactory) {
         require(
             _owner != address(0x0) || _owner != address(this),
             "OrgID: Invalid owner address"
@@ -67,6 +72,7 @@ contract OrgID {
         }
 
         owner = _owner;
+        NFT_FACTORY = _nftFactory;
 
         emit OrganizationCreated(_owner, _signers);
     }
@@ -128,5 +134,15 @@ contract OrgID {
         );
 
         if (success) emit ExecutedTransaction(_to, _value, _data);
+    }
+
+    /** ===== CREDENTIALS ===== */
+
+    function deployNFTContract(string memory _name, string memory _symbol) public isMember returns (address) {
+        require(msg.sender == owner, "OrgID: Not owner");
+
+        CREDENTIAL_NFT = CredentialNFTFactory(NFT_FACTORY).deployCredentialNFT(_name, _symbol);
+
+        return CREDENTIAL_NFT;
     }
 }

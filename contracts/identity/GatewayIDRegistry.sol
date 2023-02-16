@@ -22,11 +22,12 @@ contract GatewayIDRegistry {
     mapping(address => string) public reverseResolver;
     string[] public usernames;
 
+    address public NFT_FACTORY;
+
     /*
      * @dev Events
      */
     event IdentityDeployed(string indexed _username, address indexed _identity);
-
     event IdentityDeleted(string indexed _username, address indexed _identity);
 
     /**
@@ -64,7 +65,7 @@ contract GatewayIDRegistry {
             resolver[_username].identity == address(0),
             "GatewayIDRegistry: Username already exists"
         );
-        OrgID newIdentity = new OrgID(_owner, _signers);
+        OrgID newIdentity = new OrgID(_owner, _signers, NFT_FACTORY);
         resolver[_username] = Identity({
             identity: address(newIdentity),
             IDType: Type.ORG
@@ -85,6 +86,10 @@ contract GatewayIDRegistry {
         return resolver[_username].identity;
     }
 
+    function getIdentity(address _identity) external view returns (string memory) {
+        return reverseResolver[_identity];
+    }
+
     /**
      * getUserIDMasterWallet - returns the address of the master wallet for a GatewayID contract associated with a provided username
      * @param _username - bytes32 representing the username associated with the desired GatewayID contract
@@ -94,6 +99,14 @@ contract GatewayIDRegistry {
         string memory _username
     ) external view returns (address) {
         return UserID(resolver[_username].identity).getMasterWallet();
+    }
+
+    function getType(string memory _username) external view returns (Type) {
+        return resolver[_username].IDType;
+    }
+
+    function getType(address _identity) external view returns (Type) {
+        return resolver[reverseResolver[_identity]].IDType;
     }
 
     /**

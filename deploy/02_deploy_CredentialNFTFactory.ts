@@ -7,7 +7,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
     // proxy only in non-live network (localhost and hardhat network) enabling HCR (Hot Contract Replacement)
     // in live network, proxy is disabled and constructor is invoked
-    await deploy("GatewayIDRegistry", {
+    await deploy("CredentialNFTFactory", {
         from: deployer,
         args: [],
         log: true,
@@ -16,5 +16,5 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 export default func;
-func.id = "deploy_GatewayIDRegistry"; // id required to prevent reexecution
-func.tags = ["GatewayIDRegistry"];
+func.id = "deploy_CredentialNFT_factory"; // id required to prevent reexecution
+func.tags = ["CredentialNFTFactory"];

@@ -16,16 +16,17 @@ contract CredentialNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, A
 
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
+
     mapping (string => address) private credentialToMinter;
     mapping (string => bytes) private credentialToMetadataSig;
     mapping (uint256 => string) private _tokenIdToCredentialId;
+    
 
     event CredentialMinted(string indexed credentialId, address indexed minter, uint256 indexed tokenId);
     event MinterRemoved(string indexed credentialId, address indexed minter);
     event MinterRegistered(string indexed credentialId, address indexed minter);
 
     constructor(string memory _name, string memory _symbol) ERC721(_name, _symbol) {
-        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(MINTER_ROLE, _msgSender());
     }
 
@@ -33,50 +34,23 @@ contract CredentialNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, A
         return credentialToMinter[_credentialId];
     }
 
-    function pause() public onlyRole(DEFAULT_ADMIN_ROLE) {
-        _pause();
-    }
-
-    function unpause() public onlyRole(DEFAULT_ADMIN_ROLE) {
-        _unpause();
-    }
-
     function setMinter(string memory _credentialId, address _minter) internal onlyOwner {
         credentialToMinter[_credentialId] = _minter;
+        emit MinterRegistered(_credentialId, _minter);
     }
-
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721, ERC721Enumerable, AccessControl) returns (bool) {
-        return super.supportsInterface(interfaceId);
-    }
-
+    
     function removeMinter(string memory _credentialId, address _minter) external onlyOwner {
         require(credentialToMinter[_credentialId] == _minter, "CredentialNFT: Minter is not registered for this credential");
         delete credentialToMinter[_credentialId];
         emit MinterRemoved(_credentialId, _minter);
     }
 
-    function _beforeTokenTransfer(address from, address to, uint256 tokenId, uint256 batchSize) override(ERC721, ERC721Enumerable) internal {
-        require(from == address(0) || to == address(0), "CredentialNFT: You cannot transfer the NFT to other accounts.");
-        super._beforeTokenTransfer(from, to, tokenId, batchSize);
+    function pause() public onlyOwner {
+        _pause();
     }
 
-    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
-        return super.tokenURI(tokenId);
-    }
-
-    function registerCredential(string memory _credentialId, address _recipient) external onlyOwner {
-        require(_recipient != address(0), "CredentialNFT: Recipient cannot be the zero address");
-
-        // Register the credential and authorize the caller to mint NFTs for it
-        setMinter(_credentialId, _recipient);
-        emit MinterRegistered(_credentialId, _recipient);
-    }
-
-    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
-        super._burn(tokenId);
-         if (bytes(tokenURI(tokenId)).length != 0) {
-            _setTokenURI(tokenId, "");
-        }
+    function unpause() public onlyOwner {
+        _unpause();
     }
 
     function isValid(string memory _tokenURI, bytes memory _metadataSig) public view returns (bool) {
@@ -90,7 +64,15 @@ contract CredentialNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, A
         return recovered == owner();
     }
 
-    function mintNFT(string memory _credentialId, string memory _tokenURI, bytes memory _metadataSig) external {
+    function registerCredential(string memory _credentialId, address _recipient) external onlyOwner {
+        require(_recipient != address(0), "CredentialNFT: Recipient cannot be the zero address");
+
+        // Register the credential and authorize the caller to mint NFTs for it
+        setMinter(_credentialId, _recipient);
+        emit MinterRegistered(_credentialId, _recipient);
+    }
+
+    function mintNFT(string memory _credentialId, string memory _tokenURI, bytes memory _metadataSig) external onlyRole(MINTER_ROLE) whenNotPaused {
         require(_msgSender() == credentialToMinter[_credentialId], "CredentialNFT: Only the registered minter can mint NFTs for this credential");
 
         // Ensure the credential is valid
@@ -105,4 +87,26 @@ contract CredentialNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, A
 
         emit CredentialMinted(_credentialId, _msgSender(), tokenId);
     }   
+
+    /* ===== OVERRIDES ===== */
+
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721, ERC721Enumerable, AccessControl) returns (bool) {
+        return super.supportsInterface(interfaceId);
+    }
+    
+    function _beforeTokenTransfer(address from, address to, uint256 tokenId, uint256 batchSize) override(ERC721, ERC721Enumerable) internal {
+        require(from == address(0) || to == address(0), "CredentialNFT: You cannot transfer the NFT to other accounts.");
+        super._beforeTokenTransfer(from, to, tokenId, batchSize);
+    }
+
+    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
+        return super.tokenURI(tokenId);
+    }
+
+    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
+        super._burn(tokenId);
+         if (bytes(tokenURI(tokenId)).length != 0) {
+            _setTokenURI(tokenId, "");
+        }
+    }
 }
