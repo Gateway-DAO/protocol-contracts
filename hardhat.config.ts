@@ -2,6 +2,7 @@ import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-deploy";
 import "@nomiclabs/hardhat-ganache";
+import "@nomiclabs/hardhat-etherscan";
 import {
     getDeployerAccount,
     getNodeURL,
@@ -55,6 +56,24 @@ const config: HardhatUserConfig = {
             chainId: 1337,
         },
     },
+    etherscan: {
+        apiKey: {
+            goerli: process.env.ETHERSCAN_API_KEY as string,
+            polygon: process.env.ETHERSCAN_API_KEY as string,
+            ganache: "abc"
+
+        },
+        customChains: [
+            {
+                network: "ganache",
+                chainId: 1337,
+                urls: {
+                    apiURL: "http://localhost:4000/api",
+                    browserURL: "http://localhost:4000",
+                }
+            }
+        ]
+    }
 };
 
 export default config;
