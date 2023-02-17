@@ -24,12 +24,19 @@ contract GatewayIDRegistry is Ownable {
     string[] public usernames;
 
     address public NFT_FACTORY;
+    address public DATA_MODEL;
+    address public CREDENTIAL;
 
     /*
      * @dev Events
      */
     event IdentityDeployed(string indexed _username, address indexed _identity);
     event IdentityDeleted(string indexed _username, address indexed _identity);
+
+    constructor(address _credential, address _dataModel) {
+        CREDENTIAL = _credential;
+        DATA_MODEL = _dataModel;
+    }
 
     function setFactoryAddress(address _factory) public onlyOwner {
         NFT_FACTORY = _factory;
@@ -70,7 +77,19 @@ contract GatewayIDRegistry is Ownable {
             resolver[_username].identity == address(0),
             "GatewayIDRegistry: Username already exists"
         );
-        OrgID newIdentity = new OrgID(_owner, _signers, NFT_FACTORY);
+
+        require(
+            _owner != address(0),
+            "GatewayIDRegistry: Invalid owner address"
+        );
+
+        OrgID newIdentity = new OrgID(
+            _owner,
+            _signers,
+            NFT_FACTORY,
+            CREDENTIAL,
+            DATA_MODEL
+        );
         resolver[_username] = Identity({
             identity: address(newIdentity),
             IDType: Type.ORG
@@ -85,13 +104,19 @@ contract GatewayIDRegistry is Ownable {
      * @param _username - bytes32 representing the username associated with the desired GatewayID contract
      * @return - the address of the GatewayID contract associated with the provided username
      */
-    function getIdentity(
-        string memory _username
-    ) external view returns (address) {
+    function getIdentity(string memory _username)
+        external
+        view
+        returns (address)
+    {
         return resolver[_username].identity;
     }
 
-    function getIdentity(address _identity) external view returns (string memory) {
+    function getIdentity(address _identity)
+        external
+        view
+        returns (string memory)
+    {
         return reverseResolver[_identity];
     }
 
@@ -100,9 +125,11 @@ contract GatewayIDRegistry is Ownable {
      * @param _username - bytes32 representing the username associated with the desired GatewayID contract
      * @return - the address of the master wallet for the GatewayID contract associated with the provided username
      */
-    function getUserIDMasterWallet(
-        string memory _username
-    ) external view returns (address) {
+    function getUserIDMasterWallet(string memory _username)
+        external
+        view
+        returns (address)
+    {
         return UserID(resolver[_username].identity).getMasterWallet();
     }
 
@@ -119,9 +146,11 @@ contract GatewayIDRegistry is Ownable {
      * @param _username - bytes32 representing the username to check
      * @return - a boolean indicating whether the provided username is associated with a GatewayID contract
      */
-    function usernameExists(
-        string memory _username
-    ) external view returns (bool) {
+    function usernameExists(string memory _username)
+        external
+        view
+        returns (bool)
+    {
         return resolver[_username].identity != address(0);
     }
 
@@ -131,7 +160,7 @@ contract GatewayIDRegistry is Ownable {
             "GatewayIDRegistry: Username does not exist"
         );
         emit IdentityDeleted(_username, resolver[_username].identity);
-        
+
         delete resolver[_username].identity;
         delete resolver[_username].IDType;
         delete resolver[_username];
