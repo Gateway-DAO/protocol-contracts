@@ -9,6 +9,8 @@ import "../CredentialNFTFactory.sol";
 import "../Credential.sol";
 import "../DataModel.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title GatewayID
  * @dev NatSpec documentation for the GatewayID smart contract.
@@ -17,7 +19,7 @@ contract OrgID is Ownable, Pausable {
     /**
      * @dev Mapping of wallet index and wallet details
      */
-    mapping(address => bool) internal members;
+    mapping(address => bool) public members;
     uint256 public member_count;
 
     address public NFT_FACTORY;
@@ -81,7 +83,7 @@ contract OrgID is Ownable, Pausable {
         CREDENTIAL = _credential;
 
         emit OrganizationCreated(_owner, _signers);
-        transferOwnership(_owner);
+        _transferOwnership(_owner);
     }
 
     /**
