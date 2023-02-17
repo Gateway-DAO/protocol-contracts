@@ -2,6 +2,8 @@
 pragma solidity ^0.8.17;
 
 import "../CredentialNFTFactory.sol";
+import "../Credential.sol";
+import "../DataModel.sol";
 
 /**
  * @title GatewayID
@@ -16,6 +18,8 @@ contract OrgID {
     uint256 public member_count;
 
     address public NFT_FACTORY;
+    address public DATA_MODEL;
+    address public CREDENTIAL;
     address public CREDENTIAL_NFT;
 
     /**
@@ -51,7 +55,13 @@ contract OrgID {
     /**
      * @dev Constructor to initialize the master wallet index
      */
-    constructor(address _owner, address[] memory _signers, address _nftFactory) {
+    constructor(
+        address _owner,
+        address[] memory _signers,
+        address _nftFactory,
+        address _credential,
+        address _dataModel
+    ) {
         require(
             _owner != address(0x0) || _owner != address(this),
             "OrgID: Invalid owner address"
@@ -72,7 +82,11 @@ contract OrgID {
         }
 
         owner = _owner;
+
+        // Add contracts to variables
         NFT_FACTORY = _nftFactory;
+        DATA_MODEL = _dataModel;
+        CREDENTIAL = _credential;
 
         emit OrganizationCreated(_owner, _signers);
     }
@@ -129,20 +143,85 @@ contract OrgID {
     ) public payable virtual isMember returns (bool success) {
         require(_to != address(0), "OrgID: Cannot send to address 0x0");
 
-        (success, ) = _to.call{value: _value}(
-            _data
-        );
+        (success, ) = _to.call{value: _value}(_data);
 
         if (success) emit ExecutedTransaction(_to, _value, _data);
     }
 
     /** ===== CREDENTIALS ===== */
 
-    function deployNFTContract(string memory _name, string memory _symbol) public isMember returns (address) {
+    function deployNFTContract(string memory _name, string memory _symbol)
+        public
+        isMember
+        returns (address)
+    {
         require(msg.sender == owner, "OrgID: Not owner");
 
-        CREDENTIAL_NFT = CredentialNFTFactory(NFT_FACTORY).deployCredentialNFT(_name, _symbol);
+        CREDENTIAL_NFT = CredentialNFTFactory(NFT_FACTORY).deployCredentialNFT(
+            _name,
+            _symbol
+        );
 
         return CREDENTIAL_NFT;
+    }
+
+    function issueCredential(
+        string memory _id,
+        address _target,
+        string memory _url,
+        string memory _dm_id,
+        uint256 _expire_date,
+        string memory _name,
+        string memory _description,
+        string memory _revoked_conditions,
+        string memory _suspended_conditions,
+        bytes memory _metadata_sig
+    ) public isMember {
+        CredentialContract(CREDENTIAL).issueCredential(
+            _id,
+            address(this),
+            _target,
+            _url,
+            _dm_id,
+            _expire_date,
+            _name,
+            _description,
+            _revoked_conditions,
+            _suspended_conditions,
+            _metadata_sig
+        );
+    }
+
+    function revokeCredential(string memory _id, bytes memory _metadata_sig)
+        public
+        isMember
+    {
+        CredentialContract(CREDENTIAL).revokeCredential(_id);
+    }
+
+    function suspendCredential(string memory _id, bytes memory _metadata_sig)
+        public
+        isMember
+    {
+        CredentialContract(CREDENTIAL).suspendCredential(_id);
+    }
+
+    /** ===== DATA MODELS ===== */
+
+    function createDataModel(
+        string memory _id,
+        string memory _name,
+        string memory _description,
+        string memory _url
+    ) public isMember {
+        DataModel(DATA_MODEL).createModel(_id, _name, _description, _url);
+    }
+
+    function updateDataModel(
+        string memory _id,
+        string memory _version,
+        string memory _url
+    ) public isMember {
+        DataModel(DATA_MODEL).createModelVersion(_id, _version, _url);
     }
 }
