@@ -48,7 +48,7 @@ const config: HardhatUserConfig = {
             accounts: [process.env.PRIVATE_KEY as string],
         },
         ganache: {
-            url: process.env.GANACHE_URL || "http://localhost:7545",
+            url: process.env.GANACHE_URL || "http://localhost:8545",
             accounts: {
                 mnemonic: process.env.GANACHE_MNEMONIC,
             },
