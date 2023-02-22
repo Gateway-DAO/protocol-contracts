@@ -72,11 +72,11 @@ contract CredentialNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, A
         emit MinterRegistered(_credentialId, _recipient);
     }
 
-    function mintNFT(string memory _credentialId, string memory _tokenURI, bytes memory _metadataSig) external whenNotPaused {
+    function mintNFT(string memory _credentialId, string memory _tokenURI) external whenNotPaused {
         // require(_msgSender() == credentialToMinter[_credentialId], "CredentialNFT: Only the registered minter can mint NFTs for this credential");
 
         // Ensure the credential is valid
-        require(isValid(_tokenURI, _metadataSig), "CredentialNFT: Invalid metadata");
+        // require(isValid(_tokenURI, _metadataSig), "CredentialNFT: Invalid metadata");
 
         // Mint the NFT and transfer it to the minter
         uint256 tokenId = _tokenIdTracker.current();
