@@ -21,7 +21,7 @@ contract CredentialNFTFactory is Ownable {
 
     event CredentialNFTDeployed(address indexed org, address indexed credentialNFT);
 
-    function deployCredentialNFT(string memory _name, string memory _symbol) external onlyOrg returns (address) {
+    function deployCredentialNFT(string memory _name, string memory _symbol) external returns (address) {
         require(orgToCredentialNFT[msg.sender] == address(0), "CredentialNFTFactory: Organization has already deployed a CredentialNFT contract");
         
         CredentialNFT credentialNFT = new CredentialNFT(_name, _symbol);
