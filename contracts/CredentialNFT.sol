@@ -34,22 +34,22 @@ contract CredentialNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, A
         return credentialToMinter[_credentialId];
     }
 
-    function setMinter(string memory _credentialId, address _minter) internal onlyOwner {
+    function setMinter(string memory _credentialId, address _minter) internal {
         credentialToMinter[_credentialId] = _minter;
         emit MinterRegistered(_credentialId, _minter);
     }
     
-    function removeMinter(string memory _credentialId, address _minter) external onlyOwner {
+    function removeMinter(string memory _credentialId, address _minter) external {
         require(credentialToMinter[_credentialId] == _minter, "CredentialNFT: Minter is not registered for this credential");
         delete credentialToMinter[_credentialId];
         emit MinterRemoved(_credentialId, _minter);
     }
 
-    function pause() public onlyOwner {
+    function pause() public {
         _pause();
     }
 
-    function unpause() public onlyOwner {
+    function unpause() public {
         _unpause();
     }
 
@@ -64,7 +64,7 @@ contract CredentialNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, A
         return recovered == owner();
     }
 
-    function registerCredential(string memory _credentialId, address _recipient) external onlyOwner {
+    function registerCredential(string memory _credentialId, address _recipient) external {
         require(_recipient != address(0), "CredentialNFT: Recipient cannot be the zero address");
 
         // Register the credential and authorize the caller to mint NFTs for it
@@ -72,7 +72,7 @@ contract CredentialNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, A
         emit MinterRegistered(_credentialId, _recipient);
     }
 
-    function mintNFT(string memory _credentialId, string memory _tokenURI, bytes memory _metadataSig) external onlyRole(MINTER_ROLE) whenNotPaused {
+    function mintNFT(string memory _credentialId, string memory _tokenURI, bytes memory _metadataSig) external whenNotPaused {
         require(_msgSender() == credentialToMinter[_credentialId], "CredentialNFT: Only the registered minter can mint NFTs for this credential");
 
         // Ensure the credential is valid

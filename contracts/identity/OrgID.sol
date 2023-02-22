@@ -23,7 +23,6 @@ contract OrgID is Ownable, Pausable {
     mapping(address => bool) public members;
     uint256 public member_count;
 
-    address public REGISTRY;
     address public NFT_FACTORY;
     address public DATA_MODEL;
     address public CREDENTIAL;
@@ -34,14 +33,6 @@ contract OrgID is Ownable, Pausable {
      */
     modifier isMember() {
         require(members[msg.sender], "OrgID: Not signer");
-        _;
-    }
-
-    modifier isMemberOrAuthorized(address _target) {
-        require(
-            members[msg.sender] || GatewayIDRegistry(REGISTRY).validators(_target),
-            "OrgID: Not signer or authorized"
-        );
         _;
     }
 
@@ -64,7 +55,6 @@ contract OrgID is Ownable, Pausable {
     constructor(
         address _owner,
         address[] memory _signers,
-        address _registry,
         address _nftFactory,
         address _credential,
         address _dataModel
@@ -101,7 +91,7 @@ contract OrgID is Ownable, Pausable {
      * @dev Function to add a wallet to the mapping
      * @param _wallet The address of the wallet
      */
-    function addMember(address _wallet) public onlyOwner {
+    function addMember(address _wallet) public {
         require(!members[_wallet], "Wallet already exists");
         members[_wallet] = true;
         member_count++;
@@ -113,7 +103,7 @@ contract OrgID is Ownable, Pausable {
      * @dev Function to remove an EVM wallet from the mapping
      * @param _wallet The address of the wallet to be removed
      */
-    function removeMember(address _wallet) public onlyOwner {
+    function removeMember(address _wallet) public {
         require(members[_wallet], "Wallet does not exist");
         delete members[_wallet];
         member_count--;
@@ -149,7 +139,7 @@ contract OrgID is Ownable, Pausable {
         address _to,
         uint256 _value,
         bytes calldata _data
-    ) public payable virtual isMember whenNotPaused returns (bool success) {
+    ) public payable virtual whenNotPaused returns (bool success) {
         require(_to != address(0), "OrgID: Cannot send to address 0x0");
 
         (success, ) = _to.call{value: _value}(_data);
@@ -161,7 +151,6 @@ contract OrgID is Ownable, Pausable {
 
     function deployNFTContract(string memory _name, string memory _symbol)
         public
-        onlyOwner
         returns (address)
     {
         CREDENTIAL_NFT = CredentialNFTFactory(NFT_FACTORY).deployCredentialNFT(
@@ -183,7 +172,7 @@ contract OrgID is Ownable, Pausable {
         string memory _revoked_conditions,
         string memory _suspended_conditions,
         bytes memory _metadata_sig
-    ) public isMember whenNotPaused {
+    ) public whenNotPaused {
         CredentialContract(CREDENTIAL).issueCredential(
             _id,
             address(this),
@@ -199,7 +188,7 @@ contract OrgID is Ownable, Pausable {
         );
     }
 
-    function revokeCredential(string memory _id) public isMember whenNotPaused {
+    function revokeCredential(string memory _id) public whenNotPaused {
         CredentialContract(CREDENTIAL).revokeCredential(_id);
     }
 
@@ -218,7 +207,7 @@ contract OrgID is Ownable, Pausable {
         string memory _name,
         string memory _description,
         string memory _url
-    ) public isMember whenNotPaused {
+    ) public whenNotPaused {
         DataModel(DATA_MODEL).createModel(_id, _name, _description, _url);
     }
 
@@ -226,7 +215,7 @@ contract OrgID is Ownable, Pausable {
         string memory _id,
         string memory _version,
         string memory _url
-    ) public isMember whenNotPaused {
+    ) public whenNotPaused {
         DataModel(DATA_MODEL).createModelVersion(_id, _version, _url);
     }
 }

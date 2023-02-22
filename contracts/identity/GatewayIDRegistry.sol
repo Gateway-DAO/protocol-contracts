@@ -27,8 +27,6 @@ contract GatewayIDRegistry is Ownable {
     address public DATA_MODEL;
     address public CREDENTIAL;
 
-    mapping(address => bool) public validators;
-
     /*
      * @dev Events
      */
@@ -38,7 +36,6 @@ contract GatewayIDRegistry is Ownable {
     constructor(address _credential, address _dataModel) {
         CREDENTIAL = _credential;
         DATA_MODEL = _dataModel;
-        validators[msg.sender] = true;
     }
 
     function setFactoryAddress(address _factory) public onlyOwner {
@@ -89,7 +86,6 @@ contract GatewayIDRegistry is Ownable {
         OrgID newIdentity = new OrgID(
             _owner,
             _signers,
-            address(this),
             NFT_FACTORY,
             CREDENTIAL,
             DATA_MODEL
