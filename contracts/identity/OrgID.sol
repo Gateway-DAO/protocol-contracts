@@ -5,6 +5,7 @@ pragma solidity ^0.8.17;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
+import "./GatewayIDRegistry.sol";
 import "../CredentialNFTFactory.sol";
 import "../Credential.sol";
 import "../DataModel.sol";
@@ -22,6 +23,7 @@ contract OrgID is Ownable, Pausable {
     mapping(address => bool) public members;
     uint256 public member_count;
 
+    address public REGISTRY;
     address public NFT_FACTORY;
     address public DATA_MODEL;
     address public CREDENTIAL;
@@ -32,6 +34,14 @@ contract OrgID is Ownable, Pausable {
      */
     modifier isMember() {
         require(members[msg.sender], "OrgID: Not signer");
+        _;
+    }
+
+    modifier isMemberOrAuthorized(address _target) {
+        require(
+            members[msg.sender] || GatewayIDRegistry(REGISTRY).validators(_target),
+            "OrgID: Not signer or authorized"
+        );
         _;
     }
 
@@ -54,6 +64,7 @@ contract OrgID is Ownable, Pausable {
     constructor(
         address _owner,
         address[] memory _signers,
+        address _registry,
         address _nftFactory,
         address _credential,
         address _dataModel
