@@ -167,7 +167,7 @@ contract CredentialContract is Ownable {
         string memory _revoked_conditions,
         string memory _suspended_conditions,
         bytes memory _metadata_sig
-    ) public credentialExists(_id) onlyIssuer(_id) {
+    ) public credentialExists(_id) onlyIssuerOrAuthorized(_id) {
         Credential storage c = credentials[_id];
 
         if(bytes(_url).length > 0 && keccak256(bytes(c.metadata_url)) != keccak256(bytes(_url))){
