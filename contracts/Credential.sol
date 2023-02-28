@@ -12,11 +12,6 @@ contract CredentialContract is Ownable {
         Invalid
     }
 
-    enum LogEffect {
-        CreatedCredential,
-        ChangedStatus
-    }
-
     struct CredentialContext {
         string name;
         string description;
@@ -42,15 +37,6 @@ contract CredentialContract is Ownable {
     }
 
     /**
-     * @dev Credential log
-     */
-    struct CredentialLog {
-        string url;
-        uint256 timestamp;
-        CredentialStatus status;
-    }
-
-    /**
      * @dev Events
      */
 
@@ -72,7 +58,6 @@ contract CredentialContract is Ownable {
     event CredentialRevoked(string id);
     event CredentialSuspended(string id);
     event CredentialReactivated(string id);
-
 
     /**
      * @dev Credential mapping
