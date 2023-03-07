@@ -72,7 +72,6 @@ contract CredentialContract is Ownable {
     event CredentialSuspended(string id);
     event CredentialReactivated(string id);
 
-
     /**
      * @dev Credential mapping
      */
@@ -109,7 +108,7 @@ contract CredentialContract is Ownable {
         string memory _revoked_conditions,
         string memory _suspended_conditions,
         bytes memory _metadata_sig
-    ) public onlyOwner {
+    ) external {
         require(
             keccak256(bytes(credentials[_id].id)) != keccak256(bytes(_id)),
             "Credential: Credential already exists"
@@ -150,6 +149,29 @@ contract CredentialContract is Ownable {
         credentials[_id] = newCredential;
     }
 
+    function issueCredential(Credential memory _credential) external {
+        require(
+            keccak256(bytes(credentials[_credential.id].id)) !=
+                keccak256(bytes(_credential.id)),
+            "Credential: Credential already exists"
+        );
+
+        emit CredentialIssued(
+            _credential.id,
+            _credential.issuer,
+            _credential.target,
+            _credential.metadata_url,
+            _credential.dm_id,
+            CredentialStatus.Active,
+            block.timestamp,
+            _credential.expire_date,
+            _credential.context,
+            _credential.metadata_sig,
+            new address[](0)
+        );
+        credentials[_credential.id] = _credential;
+    }
+
     function isValid(string memory _id) public view returns (bool) {
         bool status = credentials[_id].status == CredentialStatus.Active
             ? true
@@ -166,7 +188,10 @@ contract CredentialContract is Ownable {
         return recovered == credentials[_id].issuer ? true : false;
     }
 
-    function reactivateCredential(string memory _id) public onlyIssuerOrAuthorized(_id) {
+    function reactivateCredential(string memory _id)
+        public
+        onlyIssuerOrAuthorized(_id)
+    {
         require(
             credentials[_id].status == CredentialStatus.Suspended,
             "Credential: Credential is not suspended"
@@ -176,16 +201,23 @@ contract CredentialContract is Ownable {
         emit CredentialReactivated(_id);
     }
 
-    function revokeCredential(string memory _id) public onlyIssuerOrAuthorized(_id) {
+    function revokeCredential(string memory _id)
+        public
+        onlyIssuerOrAuthorized(_id)
+    {
         require(
             credentials[_id].status == CredentialStatus.Active,
-            "Credential: Credential is not active");
-        
+            "Credential: Credential is not active"
+        );
+
         credentials[_id].status = CredentialStatus.Revoked;
         emit CredentialRevoked(_id);
     }
 
-    function suspendCredential(string memory _id) public onlyIssuerOrAuthorized(_id) {
+    function suspendCredential(string memory _id)
+        public
+        onlyIssuerOrAuthorized(_id)
+    {
         require(
             credentials[_id].status == CredentialStatus.Active,
             "Credential: Credential is not active"

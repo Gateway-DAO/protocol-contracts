@@ -3,93 +3,131 @@ import { ethers } from "hardhat";
 import { expect, assert } from "chai";
 
 enum Type {
-  EVM,
-  Email,
-  Solana,
+    EVM,
+    Solana,
+}
+
+function addressToBytes32(address: string) {
+    return ethers.utils.hexZeroPad(ethers.utils.hexlify(address), 32);
 }
 
 describe("UserID", () => {
-  let contract: Contract;
-  let master: Signer;
-  let signer: Signer;
-  let other: Signer;
-  let solana: string;
+    let contract: Contract;
+    let registry: Contract;
 
-  before(async () => {
-    master = (await ethers.getSigners())[0];
-    signer = (await ethers.getSigners())[1];
-    other = (await ethers.getSigners())[2];
-    solana = "BZGPpxbSYH6B4hr7eXDv4s5LULZv24GB57JzqZd5Qq6D";
-  });
+    let w1: Signer;
+    let w2: Signer;
+    let w3: Signer;
+    let executor: Signer;
+    let solana: string;
 
-  beforeEach(async () => {
-    const UserID = await ethers.getContractFactory("UserID");
-    contract = await UserID.deploy(master.getAddress(), signer.getAddress());
-  });
+    before(async () => {
+        w1 = (await ethers.getSigners())[0];
+        w2 = (await ethers.getSigners())[1];
+        w3 = (await ethers.getSigners())[2];
+        executor = (await ethers.getSigners())[3];
+        solana = "BZGPpxbSYH6B4hr7eXDv4s5LULZv24GB57JzqZd5Qq6D";
 
-  it("Should be able to create a new UserID", async () => {
-    expect(await contract.getMasterWallet()).to.equal(await master.getAddress());
-    expect(await contract.noOfWallets()).to.equal(2);
-  });
+        const Registry = await ethers.getContractFactory("GatewayIDRegistry");
+        registry = await Registry.deploy();
+        await registry.addExecutor(await executor.getAddress());
+    });
 
-  it("Should be able to add a wallet", async () => {
-    const tx = await contract
-      .connect(master)
-      .addEVMWallet(await other.getAddress());
+    beforeEach(async () => {
+        const UserID = await ethers.getContractFactory("UserID");
+        contract = await UserID.deploy(
+            [
+                {
+                    public_key: addressToBytes32(await w1.getAddress()),
+                    wallet_type: Type.EVM,
+                },
+            ],
+            registry.address
+        );
+    });
 
-    const wallet = await contract.wallets[
-      ethers.utils.solidityPack(
-        ["bytes32", "address"],
-        [ethers.utils.formatBytes32String("0x0"), await other.getAddress()]
-      )
-    ];
-    expect(wallet.idx).to.equal(1);
-    expect(wallet.wallet).to.equal(await other.getAddress());
-    expect(wallet.pkh).to.equal(ethers.constants.AddressZero);
-    expect(wallet.wallet_type).to.equal(Type.EVM);
-    expect(wallet.is_master).to.be.true;
-    expect(wallet.is_signer).to.be.false;
-  });
+    it("Should be able to create a new UserID", async () => {
+        const id = await contract.getId(
+            addressToBytes32(await w1.getAddress()),
+            Type.EVM
+        );
 
-  it("Should be able to remove a wallet", async () => {
-    await contract
-      .connect(master)
-      .addEVMWallet(await other.getAddress(), Type.EVM);
-    const tx = await contract
-      .connect(master)
-      .removeEVMWallet(await other.getAddress());
+        const wallet = await contract.wallets(id);
 
-    expect(tx.logs[0].args.pkh).to.equal(await other.getAddress());
-    expect(tx.logs[0].args.wallet).to.equal(master.getAddress());
-    expect(tx.logs[0].args.wallet_type).to.equal(Type.EVM);
-    const wallet = await contract.wallets(
-      ethers.utils.solidityPack(
-        ["bytes32", "address"],
-        [ethers.utils.formatBytes32String("0x0"), await master.getAddress()]
-      )
-    );
-    expect(wallet.wallet).to.equal(ethers.constants.AddressZero);
-  });
+        expect(wallet.public_key).to.equal(
+            addressToBytes32(await w1.getAddress())
+        );
+        expect(wallet.wallet_type).to.equal(Type.EVM);
+    });
 
-  it("Should only allow master wallet to add, remove, or update a wallet", async () => {
-    await contract
-      .connect(master)
-      .addEVMWallet(await other.getAddress(), Type.EVM);
+    it("Should be able to add an EVM wallet", async () => {
+        const tx = await contract
+            .connect(w1)
+            .addWallet(addressToBytes32(await w2.getAddress()), Type.EVM);
 
-    try {
-      await contract
-        .connect(signer)
-        .addEVMWallet(await other.getAddress(), Type.EVM);
-      assert.fail();
-    } catch (err: any) {
-      expect(err.reason).to.equal("UserID: Not master wallet");
-    }
+        const wallet = await contract.wallets(
+            await contract.getId(
+                addressToBytes32(await w2.getAddress()),
+                Type.EVM
+            )
+        );
 
-    try {
-      await contract.connect(signer).removeEVMWallet(await master.getAddress());
-      assert.fail();
-    } catch (err: any) {
-      expect(err.reason).to.equal("UserID: Not master wallet");
-    }
-  });
+        expect(wallet.public_key).to.equal(
+            addressToBytes32(await w2.getAddress())
+        );
+        expect(wallet.wallet_type).to.equal(Type.EVM);
+    });
+
+    it("Should be able to add a Solana wallet", async () => {
+        const tx = await contract.connect(w1).addWallet(solana, Type.Solana);
+
+        const wallet = await contract.wallets(
+            await contract.getId(solana, Type.Solana)
+        );
+
+        expect(wallet.public_key).to.equal(solana);
+        expect(wallet.wallet_type).to.equal(Type.Solana);
+    });
+
+    it("Should be able to remove an EVM wallet", async () => {
+        await contract
+            .connect(w1)
+            .addWallet(addressToBytes32(await w2.getAddress()), Type.EVM);
+        const tx = await contract
+            .connect(w1)
+            .removeWallet(addressToBytes32(await w2.getAddress()), Type.EVM);
+
+        const wallet = await contract.wallets(
+            await contract.getId(
+                addressToBytes32(await w2.getAddress()),
+                Type.EVM
+            )
+        );
+
+        expect(wallet.public_key).to.equal(
+            addressToBytes32(ethers.constants.AddressZero)
+        );
+    });
+
+    // it("Should only allow master wallet to add, remove, or update a wallet", async () => {
+    //     await contract
+    //         .connect(w1)
+    //         .addEVMWallet(await w3.getAddress(), Type.EVM);
+
+    //     try {
+    //         await contract
+    //             .connect(w2)
+    //             .addEVMWallet(await w3.getAddress(), Type.EVM);
+    //         assert.fail();
+    //     } catch (err: any) {
+    //         expect(err.reason).to.equal("UserID: Not master wallet");
+    //     }
+
+    //     try {
+    //         await contract.connect(w2).removeEVMWallet(await w1.getAddress());
+    //         assert.fail();
+    //     } catch (err: any) {
+    //         expect(err.reason).to.equal("UserID: Not master wallet");
+    //     }
+    // });
 });

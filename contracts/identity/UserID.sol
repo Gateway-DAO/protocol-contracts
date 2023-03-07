@@ -1,324 +1,185 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+pragma solidity ^0.8.0;
 
-/**
- * @title UserID
- * @dev NatSpec documentation for the UserID smart contract.
- */
-contract UserID is Ownable {
-    /**
-     * @dev Enum to represent the type of wallet
-     */
+import "../interfaces/ICredential.sol";
+import "../interfaces/IRegistry.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+
+contract UserID {
     enum Type {
         EVM,
-        Email,
         Solana
     }
 
-    /**
-     * @dev Structure defining a wallet
-     */
     struct Wallet {
-        uint256 idx;
-        address evm_wallet;
-        bytes32 evm_pkh;
-        bytes32 evm_proof;
-        address sol_wallet;
-        bytes32 sol_pkh;
-        bytes32 sol_proof;
-        bool is_master;
-        bool is_signer;
+        bytes32 public_key;
+        Type wallet_type;
     }
 
-    /**
-     * @dev The index of the master wallet
-     */
-    bytes master_wallet_idx;
+    mapping(bytes32 => Wallet) public wallets;
+    address public REGISTRY;
 
-    /**
-     * @dev The index of the signer wallet
-     */
-    bytes signer_wallet_idx;
+    // address public owner;
 
-    /**
-     * @dev Mapping of wallet index and wallet details
-     */
-    mapping(bytes => Wallet) wallets;
-    bytes[] public wallet_indices;
+    event UserInitialized(Wallet[] wallets);
+    event WalletAdded(bytes32 public_key, Type wallet_type);
+    event WalletRemoved(bytes32 public_key);
 
-    /**
-     * @dev Modifier to ensure that only the master wallet can execute the function
-     */
-    modifier isMaster() {
+    constructor(Wallet[] memory _wallets, address _registry) {
+        for (uint256 i = 0; i < _wallets.length; i++) {
+            addWallet(_wallets[i].public_key, _wallets[i].wallet_type);
+        }
+
+        REGISTRY = _registry;
+
+        emit UserInitialized(_wallets);
+    }
+
+    modifier isExecutor() {
         require(
-            msg.sender == wallets[master_wallet_idx].evm_wallet ||
-                msg.sender == wallets[master_wallet_idx].sol_wallet,
-            "UserID: Not master wallet"
+            IRegistry(REGISTRY).isAuthorizedExecutor(msg.sender),
+            "UserID: Only executors can perform this action"
         );
         _;
     }
 
-    /**
-     * @dev Modifier to ensure that only the signer wallet can execute the function
-     */
-    modifier isSigner() {
+    modifier isMember() {
         require(
-            msg.sender == wallets[signer_wallet_idx].evm_wallet ||
-                msg.sender == wallets[signer_wallet_idx].sol_wallet ||
-                msg.sender == wallets[master_wallet_idx].evm_wallet ||
-                msg.sender == wallets[master_wallet_idx].sol_wallet,
-            "UserID: Not signer wallet"
-        );
-        _;
-    }
-
-    /**
-     * @dev Events
-     */
-
-    event WalletAdded(
-        bytes32 indexed _pkh,
-        address indexed _wallet,
-        Type _wallet_type
-    );
-
-    event WalletRemoved(
-        bytes32 indexed _pkh,
-        address indexed _wallet,
-        Type _wallet_type
-    );
-
-    event WalletUpdated(
-        bytes32 indexed _pkh,
-        address indexed _wallet,
-        Type _wallet_type
-    );
-
-    /**
-     * @dev Modifier to ensure that only a member wallet can execute the function
-     * @param _pkh The public key hash of the wallet
-     */
-    modifier isMember(bytes32 _pkh) {
-        bytes memory id = getWalletKey(msg.sender, Type.EVM, _pkh);
-
-        require(
-            msg.sender == wallets[master_wallet_idx].evm_wallet ||
-                msg.sender == wallets[master_wallet_idx].sol_wallet ||
-                msg.sender == wallets[signer_wallet_idx].evm_wallet ||
-                msg.sender == wallets[signer_wallet_idx].sol_wallet ||
-                wallets[id].evm_wallet != address(0x0) ||
-                wallets[id].sol_wallet != address(0x0),
+            wallets[getId(addressToBytes32(msg.sender), Type.EVM)].public_key ==
+                addressToBytes32(msg.sender),
             "UserID: Not a member"
         );
         _;
     }
 
-    /**
-     * @dev Constructor to initialize the master wallet index
-     */
-    constructor(address _master, address _signer) {
-        address master = _master == address(0x0) ? msg.sender : _master;
-        master_wallet_idx = getWalletKey(master, Type.EVM, bytes32(0));
-        wallet_indices.push(master_wallet_idx);
-        wallets[master_wallet_idx] = Wallet(
-            wallet_indices.length,
-            master,
-            bytes32(0),
-            bytes32(0),
-            address(0),
-            bytes32(0),
-            bytes32(0),
-            true,
-            false
-        );
-
-        if (_signer != address(0x0)) {
-            signer_wallet_idx = getWalletKey(_signer, Type.EVM, bytes32(0));
-            wallet_indices.push(signer_wallet_idx);
-            wallets[signer_wallet_idx] = Wallet(
-                wallet_indices.length,
-                _signer,
-                bytes32(0),
-                bytes32(0),
-                address(0),
-                bytes32(0),
-                bytes32(0),
-                false,
-                true
-            );
-        }
-
-        transferOwnership(master);
-    }
-
-    /**
-     * @dev Function to get the master wallet
-     */
-    function getMasterWallet() public view returns (address) {
-        bytes memory key = master_wallet_idx;
-        Type walletType = wallets[key].evm_wallet != address(0)
-            ? Type.EVM
-            : wallets[key].sol_wallet != address(0)
-            ? Type.Solana
-            : Type.EVM; // default to EVM wallet type
-
-        if (walletType == Type.EVM) {
-            return wallets[key].evm_wallet;
-        } else if (walletType == Type.Solana) {
-            bytes memory publicKey = abi.encodePacked(wallets[key].sol_pkh);
-            address ethAddress = address(
-                uint160(uint256(keccak256(publicKey)))
-            );
-            return ethAddress;
-        } else {
-            revert("UserID: Invalid wallet type");
-        }
-    }
-
-    /**
-     * @dev Function to get the master wallet
-     */
-    function noOfWallets() public view returns (uint256) {
-        return wallet_indices.length;
-    }
-
-    /**
-     * @dev Function to add a wallet to the mapping
-     * @param _wallet The address of the wallet
-     * @param _wallet_type The type of wallet (EVM or Solana)
-     */
-    function addWallet(
-        address _wallet,
-        Type _wallet_type
-    ) public onlyOwner returns (bool _success) {
-        bytes32 pkh = getPkh(_wallet, _wallet_type);
-        bytes32 proof;
-
-        if (_wallet_type == Type.EVM) {
-            proof = keccak256(abi.encodePacked(pkh, msg.sender));
-        } else if (_wallet_type == Type.Solana) {
-            proof = keccak256(abi.encodePacked(pkh, msg.sender));
-        } else {
-            revert("UserID: Invalid wallet type");
-        }
-
-        bytes memory id = getWalletKey(msg.sender, _wallet_type, pkh);
-
+    modifier isMemberOrExecutor() {
         require(
-            wallets[id].evm_wallet == address(0x0) &&
-                wallets[id].sol_wallet == address(0x0),
+            (
+                addressToBytes32(REGISTRY) != bytes32(0)
+                    ? IRegistry(REGISTRY).isAuthorizedExecutor(msg.sender)
+                    : true
+            ) ||
+                wallets[getId(addressToBytes32(msg.sender), Type.EVM)]
+                    .public_key ==
+                addressToBytes32(msg.sender),
+            "UserID: Not a member or executor"
+        );
+        _;
+    }
+
+    function addWallet(bytes32 _public_key, Type _wallet_type)
+        public
+        isMemberOrExecutor
+    {
+        require(_public_key != bytes32(0), "UserID: Public key cannot be 0x0");
+        require(
+            _wallet_type == Type.EVM || _wallet_type == Type.Solana,
+            "UserID: Invalid wallet type"
+        );
+        require(
+            wallets[getId(_public_key, _wallet_type)].public_key == bytes32(0),
             "UserID: Wallet already exists"
         );
 
-        wallet_indices.push(id);
-        wallets[id] = Wallet(
-            wallet_indices.length - 1,
-            _wallet_type == Type.EVM ? _wallet : address(0x0),
-            _wallet_type == Type.EVM ? pkh : bytes32(0x0),
-            _wallet_type == Type.EVM ? proof : bytes32(0x0),
-            _wallet_type == Type.Solana ? _wallet : address(0x0),
-            _wallet_type == Type.Solana ? pkh : bytes32(0x0),
-            _wallet_type == Type.Solana ? proof : bytes32(0x0),
-            false,
-            false
+        wallets[getId(_public_key, _wallet_type)] = Wallet(
+            _public_key,
+            _wallet_type
         );
 
-        emit WalletAdded(pkh, _wallet, _wallet_type);
-
-        return true;
+        emit WalletAdded(_public_key, _wallet_type);
     }
 
-    /**
-     * @dev Function to remove a wallet from the mapping
-     * @param _wallet The address of the wallet to be removed
-     * @param _wallet_type The type of wallet (EVM or Solana)
-     */
-    function removeWallet(
-        address _wallet,
-        Type _wallet_type
-    ) public isMember(getPkh(_wallet, _wallet_type)) {
-        bytes32 pkh = getPkh(_wallet, _wallet_type);
-        bytes memory id = getWalletKey(msg.sender, _wallet_type, pkh);
+    function removeWallet(bytes32 _public_key, Type _wallet_type)
+        public
+        isMemberOrExecutor
+    {
+        require(
+            wallets[getId(_public_key, _wallet_type)].public_key != bytes32(0),
+            "UserID: Wallet does not exist"
+        );
+
+        delete wallets[getId(_public_key, _wallet_type)];
+
+        emit WalletRemoved(_public_key);
+    }
+
+    function getWallet(bytes32 _public_key, Type _wallet_type)
+        public
+        view
+        returns (Wallet memory)
+    {
+        return wallets[getId(_public_key, _wallet_type)];
+    }
+
+    function getWallet(bytes32 _id) public view returns (Wallet memory) {
+        return wallets[_id];
+    }
+
+    // Executors will execute this
+    function executeTransaction(
+        bytes32 _publicKey,
+        Type _walletType,
+        bytes calldata _data,
+        bytes calldata _signature
+    ) public isExecutor {
+        bytes32 id = getId(_publicKey, _walletType);
 
         require(
-            wallets[id].is_master == false,
-            "UserID: Cannot remove master wallet"
+            wallets[id].public_key != bytes32(0),
+            "UserID: Wallet does not exist"
         );
 
-        uint256 rowToReplace = wallets[id].idx;
-        bytes memory keyToMove = wallet_indices[wallet_indices.length - 1];
-        wallets[keyToMove].idx = rowToReplace;
-        wallet_indices[rowToReplace] = keyToMove;
-        delete wallets[id];
-        wallet_indices.pop();
-
-        emit WalletRemoved(pkh, _wallet, _wallet_type);
-    }
-
-    /**
-     * @dev Function to change the master/owner of the contract
-     * @param _member The address of the new master
-     */
-    function changeMaster(
-        address _member
-    ) public isMaster returns (bool _success) {
-        bytes memory memberWalletKey = getWalletKey(_member, Type.EVM, bytes32(0x0));
-        
-        require(
-            wallets[memberWalletKey].evm_wallet != address(0x0),
-            "UserID: Not a member"
-        );
-
-        wallets[memberWalletKey].is_master = true;
-        wallets[master_wallet_idx].is_master = false;
-
-        master_wallet_idx = memberWalletKey;
-        transferOwnership(_member);
-
-        return true;
-    }
-
-    /**
-     * ==== Utils ====
-     */
-
-    /**
-     * @dev Function to get the public key hash of a wallet
-     * @param _wallet The address of the wallet
-     * @param _wallet_type The type of wallet (EVM or Solana)
-     */
-    function getPkh(
-        address _wallet,
-        Type _wallet_type
-    ) internal pure returns (bytes32) {
-        if (_wallet_type == Type.EVM) {
-            return keccak256(abi.encodePacked(_wallet));
-        } else if (_wallet_type == Type.Solana) {
-            return bytes32(uint256(uint160(_wallet)));
-        } else {
-            revert("UserID: Invalid wallet type");
-        }
-    }
-
-    function getWalletKey(
-        address wallet,
-        Type walletType,
-        bytes32 pkh
-    ) internal pure returns (bytes memory) {
-        require(wallet != address(0), "UserID: Invalid wallet address");
-
-        bytes memory key = abi.encodePacked(pkh);
-
-        if (walletType == Type.EVM) {
-            key = abi.encodePacked(key, abi.encodePacked(address(wallet)));
-        } else if (walletType == Type.Solana) {
-            key = abi.encodePacked(key, abi.encodePacked(bytes20(wallet)));
-        } else {
-            revert("UserID: Invalid wallet type");
+        if (wallets[id].wallet_type == Type.Solana) {
+            address signer = ECDSA.recover(
+                ECDSA.toEthSignedMessageHash(_data),
+                _signature
+            );
+            require(
+                IRegistry(REGISTRY).isAuthorizedExecutor(signer),
+                "UserID: Invalid signature"
+            );
         }
 
-        return key;
+        (bool success, ) = address(this).call(_data);
+        require(success, "UserID: Transaction failed");
+    }
+
+    /* ==== Credentials ==== */
+
+    function issueCredential(ICredential.Credential memory _credential)
+        public
+        isMemberOrExecutor
+    {
+        if (_credential.issuer != address(this)) {
+            _credential.issuer = address(this);
+        }
+
+        ICredential(REGISTRY).issueCredential(_credential);
+    }
+
+    function revokeCredential(string memory _id) public isMemberOrExecutor {
+        ICredential(REGISTRY).revokeCredential(_id);
+    }
+
+    function suspendCredential(string memory _id) public isMemberOrExecutor {
+        ICredential(REGISTRY).suspendCredential(_id);
+    }
+
+    /* ==== Utils ==== */
+
+    function getId(bytes32 _public_key, Type _wallet_type)
+        public
+        pure
+        returns (bytes32)
+    {
+        bytes32 padding = _wallet_type == Type.EVM
+            ? bytes32("eth:")
+            : bytes32("sol:");
+        return keccak256(abi.encodePacked(padding, _public_key));
+    }
+
+    function addressToBytes32(address _address) public pure returns (bytes32) {
+        return bytes32(uint256(uint160(_address)));
     }
 }

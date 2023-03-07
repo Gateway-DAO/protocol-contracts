@@ -19,13 +19,17 @@ contract GatewayIDRegistry is Ownable {
         Type IDType;
     }
 
+    struct ContractAddresses {
+        address credential;
+        address dataModel;
+        address nftFactory;
+    }
+
     mapping(string => Identity) public resolver;
     mapping(address => string) public reverseResolver;
     string[] public usernames;
 
-    address public NFT_FACTORY;
-    address public DATA_MODEL;
-    address public CREDENTIAL;
+    mapping(address => bool) public executors;
 
     /*
      * @dev Events
@@ -33,32 +37,17 @@ contract GatewayIDRegistry is Ownable {
     event IdentityDeployed(string indexed _username, address indexed _identity);
     event IdentityDeleted(string indexed _username, address indexed _identity);
 
-    constructor(address _credential, address _dataModel) {
-        CREDENTIAL = _credential;
-        DATA_MODEL = _dataModel;
-    }
+    constructor() {}
 
-    function setFactoryAddress(address _factory) public onlyOwner {
-        NFT_FACTORY = _factory;
-    }
-
-    /**
-     * deployUserID - deploys a new GatewayID contract and associates it with a provided username
-     * @param _master - address of the master wallet for the new GatewayID contract
-     * @param _signer - address of the signer for the new GatewayID contract
-     * @param _username - bytes32 representing the username to associate with the new GatewayID contract
-     * @return _success - a boolean indicating whether the deployment was successful
-     */
     function deployUserID(
-        address _master,
-        address _signer,
+        UserID.Wallet[] memory _wallets,
         string memory _username
     ) external returns (bool _success) {
         require(
             resolver[_username].identity == address(0),
             "GatewayIDRegistry: Username already exists"
         );
-        UserID newIdentity = new UserID(_master, _signer);
+        UserID newIdentity = new UserID(_wallets, address(this));
         resolver[_username] = Identity({
             identity: address(newIdentity),
             IDType: Type.USER
@@ -71,7 +60,8 @@ contract GatewayIDRegistry is Ownable {
     function deployOrgID(
         address _owner,
         address[] memory _signers,
-        string memory _username
+        string memory _username,
+        ContractAddresses memory _contractAddresses
     ) external returns (bool _success) {
         require(
             resolver[_username].identity == address(0),
@@ -86,9 +76,9 @@ contract GatewayIDRegistry is Ownable {
         OrgID newIdentity = new OrgID(
             _owner,
             _signers,
-            NFT_FACTORY,
-            CREDENTIAL,
-            DATA_MODEL
+            _contractAddresses.nftFactory,
+            _contractAddresses.credential,
+            _contractAddresses.dataModel
         );
         resolver[_username] = Identity({
             identity: address(newIdentity),
@@ -118,19 +108,6 @@ contract GatewayIDRegistry is Ownable {
         returns (string memory)
     {
         return reverseResolver[_identity];
-    }
-
-    /**
-     * getUserIDMasterWallet - returns the address of the master wallet for a GatewayID contract associated with a provided username
-     * @param _username - bytes32 representing the username associated with the desired GatewayID contract
-     * @return - the address of the master wallet for the GatewayID contract associated with the provided username
-     */
-    function getUserIDMasterWallet(string memory _username)
-        external
-        view
-        returns (address)
-    {
-        return UserID(resolver[_username].identity).getMasterWallet();
     }
 
     function getType(string memory _username) external view returns (Type) {
@@ -164,5 +141,22 @@ contract GatewayIDRegistry is Ownable {
         delete resolver[_username].identity;
         delete resolver[_username].IDType;
         delete resolver[_username];
+    }
+
+    /* ==== Executors ==== */
+    function addExecutor(address _executor) external onlyOwner {
+        executors[_executor] = true;
+    }
+
+    function removeExecutor(address _executor) external onlyOwner {
+        executors[_executor] = false;
+    }
+
+    function isAuthorizedExecutor(address _executor)
+        external
+        view
+        returns (bool)
+    {
+        return executors[_executor];
     }
 }
