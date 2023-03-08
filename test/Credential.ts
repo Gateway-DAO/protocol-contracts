@@ -7,6 +7,7 @@ describe("CredentialContract", () => {
     let contract: Contract;
     let signers: SignerWithAddress[];
     let issuer: string, target: string;
+    let solanaTarget = "BZGPpxbSYH6B4hr7eXDv4s5LULZv24GB57JzqZd5Qq6D";
 
     const id = "1234567890";
     const url = "https://example.com";
@@ -34,15 +35,17 @@ describe("CredentialContract", () => {
 
         await contract.issueCredential(
             id,
-            issuer,
-            target,
+            [issuer, ""],
+            [target, ""],
             url,
             dm_id,
             expire_date,
-            name,
-            description,
-            revoked_conditions,
-            suspended_conditions,
+            {
+                name,
+                description,
+                revoked_conditions,
+                suspended_conditions,
+            },
             metadata_sig
         );
     });
@@ -51,8 +54,51 @@ describe("CredentialContract", () => {
         const credential = await contract.credentials(id);
 
         expect(credential.id).to.equal(id);
-        expect(credential.issuer).to.equal(issuer);
-        expect(credential.target).to.equal(target);
+        expect(credential.issuer.evm_address).to.equal(issuer);
+        expect(credential.target.evm_address).to.equal(target);
+        expect(credential.metadata_url).to.equal(url);
+        expect(credential.dm_id).to.equal(dm_id);
+        expect(credential.status).to.equal(0);
+        expect(credential.context.name).to.equal(name);
+        expect(credential.context.description).to.equal(description);
+        expect(credential.context.revoked_conditions).to.equal(
+            revoked_conditions
+        );
+        expect(credential.context.suspended_conditions).to.equal(
+            suspended_conditions
+        );
+        expect(credential.metadata_sig).to.equal(metadata_sig);
+    });
+
+    it("Should be able to issue a credential to a Solana wallet", async () => {
+        await contract.issueCredential(
+            id + 1,
+            [issuer, ""],
+            [ethers.constants.AddressZero, solanaTarget],
+            url,
+            dm_id,
+            expire_date,
+            {
+                name,
+                description,
+                revoked_conditions,
+                suspended_conditions,
+            },
+            metadata_sig
+        );
+
+        const credential = await contract.credentials(id + 1);
+
+        expect(credential.id).to.equal(id + 1);
+        expect(credential.issuer.evm_address).to.equal(
+            issuer
+        );
+        expect(credential.target.evm_address).to.equal(
+            ethers.constants.AddressZero
+        );
+        expect(credential.target.solana_address).to.equal(
+            solanaTarget
+        );
         expect(credential.metadata_url).to.equal(url);
         expect(credential.dm_id).to.equal(dm_id);
         expect(credential.status).to.equal(0);
@@ -71,21 +117,21 @@ describe("CredentialContract", () => {
         const signer = await signers[2];
 
         await expect(
-            contract
-                .connect(signer)
-                .issueCredential(
-                    id + "1",
-                    issuer,
-                    target,
-                    url,
-                    dm_id,
-                    expire_date,
+            contract.connect(signer).issueCredential(
+                id +  1,
+                [issuer, ""],
+                [target, ""],
+                url,
+                dm_id,
+                expire_date,
+                {
                     name,
                     description,
                     revoked_conditions,
                     suspended_conditions,
-                    metadata_sig
-                )
+                },
+                metadata_sig
+            )
         ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
@@ -104,7 +150,7 @@ describe("CredentialContract", () => {
 
     it("should update the credential fields", async function () {
         // Call the function with all optional fields provided
-      const sig = await signers[0].signMessage("https://example.com/updated");
+        const sig = await signers[0].signMessage("https://example.com/updated");
 
         const receipt = await contract.updateCredential(
             id,
@@ -129,18 +175,12 @@ describe("CredentialContract", () => {
         expect(updatedCredential.context.suspended_conditions).to.equal(
             suspended_conditions
         );
-        expect(updatedCredential.metadata_sig).to.equal(
-            sig
-        );
+        expect(updatedCredential.metadata_sig).to.equal(sig);
 
         // Check that the event was emitted correctly
         expect(receipt)
             .to.emit(contract, "CredentialUpdated")
-            .withArgs(
-                id,
-                url,
-                sig
-            );
+            .withArgs(id, url, sig);
     });
 
     it("should update only the provided fields", async function () {
@@ -164,8 +204,12 @@ describe("CredentialContract", () => {
         );
         expect(updatedCredential.context.name).to.equal(name);
         expect(updatedCredential.context.description).to.equal(description);
-        expect(updatedCredential.context.revoked_conditions).to.equal(revoked_conditions);
-        expect(updatedCredential.context.suspended_conditions).to.equal(suspended_conditions);
+        expect(updatedCredential.context.revoked_conditions).to.equal(
+            revoked_conditions
+        );
+        expect(updatedCredential.context.suspended_conditions).to.equal(
+            suspended_conditions
+        );
         expect(updatedCredential.metadata_sig).to.equal(sig);
 
         // Check that the event was emitted correctly

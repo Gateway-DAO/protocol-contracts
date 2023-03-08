@@ -4,6 +4,7 @@ pragma solidity ^0.8.17;
 // OpenZeppelin
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 import "./GatewayIDRegistry.sol";
 import "../CredentialNFTFactory.sol";
@@ -27,6 +28,8 @@ contract OrgID is Ownable, Pausable {
     address public DATA_MODEL;
     address public CREDENTIAL;
     address public CREDENTIAL_NFT;
+
+    using Strings for string;
 
     /**
      * @dev Modifier to ensure that only a signer can execute the function
@@ -163,27 +166,24 @@ contract OrgID is Ownable, Pausable {
 
     function issueCredential(
         string memory _id,
-        address _target,
+        CredentialContract.CredentialTarget memory _target,
         string memory _url,
         string memory _dm_id,
         uint256 _expire_date,
-        string memory _name,
-        string memory _description,
-        string memory _revoked_conditions,
-        string memory _suspended_conditions,
+        CredentialContract.CredentialContext memory _context,
         bytes memory _metadata_sig
     ) public whenNotPaused {
         CredentialContract(CREDENTIAL).issueCredential(
             _id,
-            address(this),
+            CredentialContract.CredentialIssuer(
+                address(this),
+                ""
+            ),
             _target,
             _url,
             _dm_id,
             _expire_date,
-            _name,
-            _description,
-            _revoked_conditions,
-            _suspended_conditions,
+            _context,
             _metadata_sig
         );
     }
