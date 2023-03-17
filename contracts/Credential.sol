@@ -15,13 +15,6 @@ contract CredentialContract is Ownable {
         Invalid
     }
 
-    struct CredentialContext {
-        string name;
-        string description;
-        string revoked_conditions;
-        string suspended_conditions;
-    }
-
     struct CredentialTarget {
         address evm_address;
         string solana_address;
@@ -44,8 +37,6 @@ contract CredentialContract is Ownable {
         CredentialStatus status;
         uint256 timestamp;
         uint256 expire_date;
-        CredentialContext context;
-        bytes metadata_sig;
         address[] permissions;
     }
 
@@ -62,10 +53,10 @@ contract CredentialContract is Ownable {
         CredentialStatus status,
         uint256 timestamp,
         uint256 expire_date,
-        CredentialContext context
+        address[] permissions
     );
 
-    event CredentialUpdated(string id, string url, bytes metadata_sig);
+    event CredentialUpdated(string id, string url);
     event CredentialRevoked(string id);
     event CredentialSuspended(string id);
     event CredentialReactivated(string id);
@@ -116,10 +107,8 @@ contract CredentialContract is Ownable {
         CredentialTarget memory _target,
         string memory _url,
         string memory _dm_id,
-        uint256 _expire_date,
-        CredentialContext memory _context,
-        bytes memory _metadata_sig
-    ) public onlyOwner {
+        uint256 _expire_date
+    ) external {
         require(
             keccak256(bytes(credentials[_id].id)) != keccak256(bytes(_id)),
             "Credential: Credential already exists"
@@ -134,8 +123,6 @@ contract CredentialContract is Ownable {
             CredentialStatus.Active,
             block.timestamp,
             _expire_date,
-            _context,
-            _metadata_sig,
             new address[](0)
         );
 
@@ -148,7 +135,7 @@ contract CredentialContract is Ownable {
             CredentialStatus.Active,
             newCredential.timestamp,
             _expire_date,
-            _context
+            new address[](0)
         );
 
         credentials[_id] = newCredential;
@@ -156,12 +143,7 @@ contract CredentialContract is Ownable {
 
     function updateCredential(
         string memory _id,
-        string memory _url,
-        string memory _name,
-        string memory _description,
-        string memory _revoked_conditions,
-        string memory _suspended_conditions,
-        bytes memory _metadata_sig
+        string memory _url
     ) public credentialExists(_id) onlyIssuerOrAuthorized(_id) {
         Credential storage c = credentials[_id];
 
@@ -172,66 +154,25 @@ contract CredentialContract is Ownable {
             c.metadata_url = _url;
         }
 
-        if (
-            bytes(_name).length > 0 &&
-            keccak256(bytes(c.context.name)) != keccak256(bytes(_name))
-        ) {
-            c.context.name = _name;
-        }
-
-        if (
-            bytes(_description).length > 0 &&
-            keccak256(bytes(c.context.description)) !=
-            keccak256(bytes(_description))
-        ) {
-            c.context.description = _description;
-        }
-
-        if (
-            bytes(_revoked_conditions).length > 0 &&
-            keccak256(bytes(c.context.revoked_conditions)) !=
-            keccak256(bytes(_revoked_conditions))
-        ) {
-            c.context.revoked_conditions = _revoked_conditions;
-        }
-
-        if (
-            bytes(_suspended_conditions).length > 0 &&
-            keccak256(bytes(c.context.suspended_conditions)) !=
-            keccak256(bytes(_suspended_conditions))
-        ) {
-            c.context.suspended_conditions = _suspended_conditions;
-        }
-
-        if (
-            _metadata_sig.length > 0 &&
-            keccak256(c.metadata_sig) != keccak256(_metadata_sig)
-        ) {
-            c.metadata_sig = _metadata_sig;
-        }
-
-        emit CredentialUpdated(_id, c.metadata_url, c.metadata_sig);
+        emit CredentialUpdated(_id, c.metadata_url);
     }
 
     function isValid(
         string memory _id
     ) public view credentialExists(_id) returns (bool) {
-        require(
-            credentials[_id].issuer.evm_address != address(0),
-            "Credential: We can only check the metadata validity of a credential issued by a EVM-compatible wallet"
-        );
+        Credential memory c = credentials[_id];
 
-        bool status = credentials[_id].status == CredentialStatus.Active;
-        require(status, "Credential: Credential is not active");
+        if (c.status == CredentialStatus.Active) {
+            if (c.expire_date > 0) {
+                if (c.expire_date > block.timestamp) {
+                    return true;
+                }
+            } else {
+                return true;
+            }
+        }
 
-        (address recovered, ) = ECDSA.tryRecover(
-            ECDSA.toEthSignedMessageHash(
-                abi.encodePacked(credentials[_id].metadata_url)
-            ),
-            credentials[_id].metadata_sig
-        );
-
-        return recovered == credentials[_id].issuer.evm_address;
+        return false;
     }
 
     function reactivateCredential(
