@@ -16,12 +16,12 @@ contract CredentialNFTV1 is ERC721, ERC721URIStorage, ERC721Enumerable, AccessCo
 
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
-
     mapping (string => address) private credentialToMinter;
     mapping (string => bytes) private credentialToMetadataSig;
     mapping (uint256 => string) private _tokenIdToCredentialId;
-    
 
+    bool public requiresRegistration = false;
+    
     event CredentialMinted(string indexed credentialId, address indexed minter, uint256 indexed tokenId);
     event MinterRemoved(string indexed credentialId, address indexed minter);
     event MinterRegistered(string indexed credentialId, address indexed minter);
@@ -46,6 +46,12 @@ contract CredentialNFTV1 is ERC721, ERC721URIStorage, ERC721Enumerable, AccessCo
         emit MinterRemoved(_credentialId, _minter);
     }
 
+    function toggleRegistration() public {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "CredentialNFT: Only the admin can toggle registration");
+
+        requiresRegistration = !requiresRegistration;
+    }
+
     function pause() public {
         _pause();
     }
@@ -63,10 +69,7 @@ contract CredentialNFTV1 is ERC721, ERC721URIStorage, ERC721Enumerable, AccessCo
     }
 
     function mintNFT(string memory _credentialId, string memory _tokenURI) external whenNotPaused {
-        // require(_msgSender() == credentialToMinter[_credentialId], "CredentialNFT: Only the registered minter can mint NFTs for this credential");
-
-        // Ensure the credential is valid
-        // require(isValid(_tokenURI, _metadataSig), "CredentialNFT: Invalid metadata");
+        require(requiresRegistration && (credentialToMinter[_credentialId] != address(0)), "CredentialNFT: This NFT is not registered to a holder");
 
         // Mint the NFT and transfer it to the minter
         uint256 tokenId = _tokenIdTracker.current();
@@ -76,6 +79,19 @@ contract CredentialNFTV1 is ERC721, ERC721URIStorage, ERC721Enumerable, AccessCo
         _setTokenURI(tokenId, _tokenURI);
 
         emit CredentialMinted(_credentialId, credentialToMinter[_credentialId], tokenId);
+    }
+
+    function mintNFT(string memory _credentialId, string memory _tokenURI, address _credentialHolder) external whenNotPaused {
+        require(!requiresRegistration, "CredentialNFT: Registration of minter per credential is required");
+
+        // Mint the NFT and transfer it to the minter
+        uint256 tokenId = _tokenIdTracker.current();
+        _tokenIdTracker.increment();
+
+        _safeMint(_credentialHolder, tokenId);
+        _setTokenURI(tokenId, _tokenURI);
+
+        emit CredentialMinted(_credentialId, _credentialHolder, tokenId);
     }   
 
     /* ===== OVERRIDES ===== */
